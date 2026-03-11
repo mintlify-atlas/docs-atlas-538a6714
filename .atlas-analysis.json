@@ -1,0 +1,161 @@
+{
+  "projectType": "saas",
+  "projectName": "Ayuntamiento de Zongolica",
+  "projectDescription": "Portal oficial del H. Ayuntamiento de Zongolica con servicios municipales, turismo interactivo y gestión de visitas 2026-2029.",
+  "theme": "almond",
+  "primaryColor": "#b47924",
+  "lightColor": "#b47924",
+  "darkColor": "#5c3c1c",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "installation"]
+          },
+          {
+            "group": "Portal Features",
+            "pages": [
+              "features/government-portal",
+              "features/tourism-system",
+              "features/multilingual",
+              "features/authentication"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Tourism System",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["tourism/overview", "tourism/xochitlanis"]
+          },
+          {
+            "group": "User Journey",
+            "pages": [
+              "tourism/onboarding",
+              "tourism/recommendations",
+              "tourism/badges",
+              "tourism/tickets"
+            ]
+          },
+          {
+            "group": "Attractions",
+            "pages": [
+              "tourism/attractions",
+              "tourism/routes",
+              "tourism/events"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/architecture",
+              "development/tech-stack",
+              "development/folder-structure"
+            ]
+          },
+          {
+            "group": "Core Systems",
+            "pages": [
+              "development/supabase",
+              "development/authentication",
+              "development/i18n"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "development/components/overview",
+              "development/components/tourism",
+              "development/components/ui"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/tourism",
+              "api/chat"
+            ]
+          },
+          {
+            "group": "Data Types",
+            "pages": [
+              "api/types/user",
+              "api/types/tourism",
+              "api/types/government"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "api/database/schema",
+              "api/database/migrations",
+              "api/database/supabase-client"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Deployment",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "deployment/environment-variables",
+              "deployment/vercel",
+              "deployment/supabase-setup"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "deployment/oauth",
+              "deployment/database",
+              "deployment/storage"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Interactive tourism onboarding system with OAuth authentication",
+    "Gamification with badges and personalized route recommendations",
+    "Multi-language support (Spanish, English, Náhuatl)",
+    "Government portal with institutional information and services",
+    "User profiles with preferences, routes, and visit tracking",
+    "Dynamic ticket generation with QR codes and social sharing",
+    "Supabase-powered backend with PostgreSQL database",
+    "Server-side rendering with Astro and React components"
+  ],
+  "publicApiSurface": [
+    "POST /api/turismo/ticket - Generate tourism tickets",
+    "POST /api/turismo/verify-visit - Verify visit codes",
+    "POST /api/turismo/rate-visit - Rate tourism experiences",
+    "GET /api/turismo/og/[code] - Generate Open Graph images",
+    "POST /api/chat - AI chat endpoint",
+    "supabase.auth.signInWithOAuth() - OAuth authentication",
+    "supabase.from('user_preferences').upsert() - Save user preferences",
+    "supabase.from('user_routes').select() - Get user routes",
+    "supabase.from('user_badges').insert() - Unlock badges",
+    "getUserProfile(userId) - Fetch user profile",
+    "saveUserRoute(route) - Save tourism route",
+    "calculateRecommendations(preferences) - Generate personalized recommendations",
+    "unlockBadges(preferences) - Calculate earned badges"
+  ]
+}

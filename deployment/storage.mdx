@@ -1,0 +1,492 @@
+---
+title: Storage Configuration
+description: Set up and manage file storage for generated tickets and user uploads
+---
+
+## Overview
+
+The application uses Supabase Storage to store generated ticket images. This guide covers creating storage buckets, configuring access policies, and managing file uploads.
+
+## Storage Architecture
+
+```
+Supabase Storage
+└── tickets (public bucket)
+    └── {user_id}
+        └── {route_id}.png
+```
+
+Files are organized by user ID to:
+- Maintain user privacy in file paths
+- Enable user-specific access policies
+- Simplify cleanup when users are deleted
+
+## Create Storage Bucket
+
+The `tickets` bucket stores generated route ticket images.
+
+<Steps>
+  <Step title="Automatic Creation (Recommended)">
+    The `supabase-setup.sql` script automatically creates the bucket:
+    
+    ```sql
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('tickets', 'tickets', true)
+    ON CONFLICT (id) DO NOTHING;
+    ```
+    
+    Run the SQL script in **SQL Editor** to create it.
+  </Step>
+  
+  <Step title="Manual Creation (If Needed)">
+    If the bucket doesn't exist:
+    
+    1. Go to **Storage** in Supabase dashboard
+    2. Click **New bucket**
+    3. Configure:
+       - **Name**: `tickets`
+       - **Public bucket**: ✅ Yes
+       - **File size limit**: 5 MB
+       - **Allowed MIME types**: `image/*`
+    4. Click **Create bucket**
+  </Step>
+  
+  <Step title="Verify Bucket">
+    Check that the bucket appears in the Storage section with:
+    - Public access enabled
+    - Correct permissions configured
+  </Step>
+</Steps>
+
+## Configure Public Access
+
+The `tickets` bucket must be public to allow sharing generated ticket images.
+
+### Why Public?
+
+Tickets need to be publicly accessible because:
+- Users share tickets on social media
+- Shared routes display tickets to non-authenticated visitors
+- No sensitive information is contained in tickets
+
+### Security Considerations
+
+<Note>
+While the bucket is public, upload permissions are restricted to authenticated users only. Anyone can view files, but only authenticated users can create/modify their own files.
+</Note>
+
+## Upload Policies
+
+The setup script creates these storage policies:
+
+### View Policy (Public)
+
+```sql
+CREATE POLICY "Anyone can view tickets"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'tickets');
+```
+
+Allows anyone to view ticket images, required for sharing functionality.
+
+### Upload Policy (Authenticated Users)
+
+```sql
+CREATE POLICY "Authenticated users can upload tickets"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'tickets' 
+    AND auth.role() = 'authenticated'
+  );
+```
+
+Only authenticated users can upload new tickets.
+
+### Update Policy (Own Files Only)
+
+```sql
+CREATE POLICY "Users can update their own tickets"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+Users can only update files in their own folder (identified by user ID in path).
+
+### Delete Policy (Own Files Only)
+
+```sql
+CREATE POLICY "Users can delete their own tickets"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+Users can only delete their own tickets.
+
+## File Organization
+
+### File Naming Convention
+
+```
+tickets/{user_id}/{route_id}.png
+```
+
+**Example**:
+```
+tickets/550e8400-e29b-41d4-a716-446655440000/abc123xyz.png
+```
+
+### Benefits
+
+- **User isolation**: Files are organized by user
+- **Easy cleanup**: Delete all files when user is removed
+- **Policy enforcement**: Folder structure enables user-specific policies
+- **Collision avoidance**: User ID + route ID ensures uniqueness
+
+## Upload Implementation
+
+Example code for uploading generated tickets:
+
+```typescript
+import { supabase } from '@/lib/supabase';
+
+// Generate ticket and upload
+async function uploadTicket(userId: string, routeId: string, imageBlob: Blob) {
+  const fileName = `${userId}/${routeId}.png`;
+  
+  const { data, error } = await supabase.storage
+    .from('tickets')
+    .upload(fileName, imageBlob, {
+      contentType: 'image/png',
+      cacheControl: '3600',
+      upsert: true // Replace if exists
+    });
+  
+  if (error) {
+    console.error('Upload error:', error);
+    throw error;
+  }
+  
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('tickets')
+    .getPublicUrl(fileName);
+  
+  return publicUrl;
+}
+```
+
+### Upload Options
+
+| Option | Description |
+|--------|-------------|
+| `contentType` | MIME type: `'image/png'`, `'image/jpeg'`, etc. |
+| `cacheControl` | Cache duration in seconds (e.g., `'3600'` = 1 hour) |
+| `upsert` | Replace existing file if `true`, fail if `false` |
+
+## Get Public URLs
+
+### Method 1: Direct Public URL
+
+```typescript
+const { data } = supabase.storage
+  .from('tickets')
+  .getPublicUrl('user-id/route-id.png');
+
+const publicUrl = data.publicUrl;
+// https://project.supabase.co/storage/v1/object/public/tickets/user-id/route-id.png
+```
+
+### Method 2: Signed URL (If Not Public)
+
+```typescript
+const { data, error } = await supabase.storage
+  .from('tickets')
+  .createSignedUrl('user-id/route-id.png', 3600); // Valid for 1 hour
+
+const signedUrl = data.signedUrl;
+```
+
+<Note>
+For the public `tickets` bucket, use `getPublicUrl()`. Signed URLs are only necessary for private buckets.
+</Note>
+
+## File Size Limits
+
+### Default Limits
+
+- **Free tier**: 50 MB per file
+- **Pro tier**: 5 GB per file
+
+### Configure Custom Limits
+
+```sql
+UPDATE storage.buckets 
+SET file_size_limit = 5242880 -- 5 MB in bytes
+WHERE id = 'tickets';
+```
+
+### Frontend Validation
+
+```typescript
+function validateFileSize(file: File, maxSizeMB: number = 5) {
+  const maxBytes = maxSizeMB * 1024 * 1024;
+  
+  if (file.size > maxBytes) {
+    throw new Error(`File size must be less than ${maxSizeMB}MB`);
+  }
+}
+```
+
+## MIME Type Restrictions
+
+### Allow Only Images
+
+```sql
+UPDATE storage.buckets 
+SET allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/webp']
+WHERE id = 'tickets';
+```
+
+### Frontend Validation
+
+```typescript
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+function validateMimeType(file: File) {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new Error('Only PNG, JPEG, and WebP images are allowed');
+  }
+}
+```
+
+## CDN Integration
+
+Supabase Storage automatically uses a CDN for better performance.
+
+### CDN Benefits
+
+✅ **Automatic**:
+- Global edge network
+- Caching at edge locations
+- Reduced latency worldwide
+- No additional configuration needed
+
+### Cache Control Headers
+
+Set cache headers when uploading:
+
+```typescript
+await supabase.storage
+  .from('tickets')
+  .upload(fileName, blob, {
+    cacheControl: '31536000' // 1 year for immutable files
+  });
+```
+
+### Cache Durations
+
+| Type | Duration | Use Case |
+|------|----------|----------|
+| `3600` | 1 hour | Frequently updated files |
+| `86400` | 1 day | Daily updated content |
+| `604800` | 1 week | Stable content |
+| `31536000` | 1 year | Immutable files (versioned) |
+
+## File Management
+
+### List Files
+
+```typescript
+// List all tickets for a user
+const { data: files } = await supabase.storage
+  .from('tickets')
+  .list(`${userId}/`, {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: 'created_at', order: 'desc' }
+  });
+```
+
+### Delete File
+
+```typescript
+const { data, error } = await supabase.storage
+  .from('tickets')
+  .remove([`${userId}/${routeId}.png`]);
+```
+
+### Delete Multiple Files
+
+```typescript
+const filesToDelete = [
+  `${userId}/route1.png`,
+  `${userId}/route2.png`,
+  `${userId}/route3.png`
+];
+
+const { data, error } = await supabase.storage
+  .from('tickets')
+  .remove(filesToDelete);
+```
+
+### Cleanup on User Deletion
+
+```typescript
+// Delete all files for a user
+const { data: files } = await supabase.storage
+  .from('tickets')
+  .list(`${userId}/`);
+
+if (files) {
+  const fileNames = files.map(file => `${userId}/${file.name}`);
+  await supabase.storage.from('tickets').remove(fileNames);
+}
+```
+
+## Storage Quota Management
+
+### Check Usage
+
+Monitor storage usage in Supabase dashboard:
+1. Go to **Settings** → **Usage**
+2. View **Storage** metrics
+3. Check total size and bandwidth
+
+### Free Tier Limits
+
+- **Storage**: 1 GB
+- **Bandwidth**: 2 GB/month
+- **Files**: Unlimited
+
+<Note>
+Generated tickets are typically 200-500 KB each. 1 GB allows for approximately 2,000-5,000 tickets.
+</Note>
+
+### Optimize Storage Usage
+
+1. **Compress images before upload**:
+   ```typescript
+   import sharp from 'sharp';
+   
+   const compressed = await sharp(buffer)
+     .png({ quality: 80 })
+     .resize(1200, 630)
+     .toBuffer();
+   ```
+
+2. **Delete old tickets**:
+   ```sql
+   -- Delete tickets older than 90 days
+   DELETE FROM storage.objects
+   WHERE bucket_id = 'tickets'
+     AND created_at < NOW() - INTERVAL '90 days';
+   ```
+
+3. **Use WebP format** (better compression):
+   ```typescript
+   const { data } = await supabase.storage
+     .from('tickets')
+     .upload(fileName, blob, {
+       contentType: 'image/webp'
+     });
+   ```
+
+## Troubleshooting
+
+### Upload Fails with "new row violates row-level security"
+
+**Cause**: Storage policies not configured or user not authenticated
+
+**Solution**:
+1. Verify SQL script created all policies
+2. Check user is authenticated:
+   ```typescript
+   const { data: { session } } = await supabase.auth.getSession();
+   if (!session) {
+     throw new Error('User not authenticated');
+   }
+   ```
+
+### File Not Found (404)
+
+**Cause**: Incorrect file path or bucket not public
+
+**Solution**:
+1. Verify bucket is set to public
+2. Check file path matches upload path
+3. Ensure file was uploaded successfully
+
+### Large Files Timing Out
+
+**Solution**:
+1. Compress images before upload
+2. Increase timeout in client configuration
+3. Use chunked uploads for very large files
+
+### CORS Errors
+
+**Cause**: Cross-origin requests blocked
+
+**Solution**:
+Supabase automatically handles CORS for storage. If issues persist:
+1. Verify bucket is public
+2. Check that requests include proper headers
+3. Use `getPublicUrl()` method for public access
+
+## Security Best Practices
+
+✅ **Recommended**:
+- Keep upload permissions restricted to authenticated users
+- Validate file types and sizes on both client and server
+- Use user ID in file paths for isolation
+- Set appropriate cache headers
+- Monitor storage usage regularly
+- Implement automatic cleanup of old files
+
+❌ **Avoid**:
+- Allowing unauthenticated uploads
+- Using predictable file names
+- Storing sensitive information in public buckets
+- Unlimited file sizes
+- Ignoring storage quota limits
+
+## Advanced Configuration
+
+### Custom Storage Transformations
+
+Supabase supports image transformations on the fly:
+
+```typescript
+const url = supabase.storage
+  .from('tickets')
+  .getPublicUrl('user-id/route.png', {
+    transform: {
+      width: 600,
+      height: 315,
+      resize: 'cover',
+      quality: 80
+    }
+  });
+```
+
+### Webhook Notifications
+
+Set up webhooks for storage events:
+1. Go to **Database** → **Webhooks**
+2. Create webhook for `storage.objects` table
+3. Configure URL to receive notifications on uploads
+
+## Next Steps
+
+After configuring storage:
+
+1. [Test file uploads](/deployment/storage#upload-implementation)
+2. [Configure CDN caching](/deployment/storage#cdn-integration)
+3. [Set up cleanup automation](/deployment/storage#cleanup-on-user-deletion)
+4. Monitor storage usage in Supabase dashboard

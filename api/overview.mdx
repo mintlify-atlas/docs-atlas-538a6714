@@ -1,0 +1,214 @@
+---
+title: 'API Overview'
+description: 'Overview of the Zongolica API endpoints, authentication, and best practices'
+icon: 'code'
+---
+
+## Introduction
+
+The Ayuntamiento de Zongolica API provides programmatic access to tourism data, user management, and chat services. All endpoints follow RESTful conventions and return JSON responses.
+
+## Base URL
+
+All API requests are made to:
+
+```
+https://zongolica.gob.mx/api
+```
+
+## Available Endpoints
+
+### Tourism API
+
+- **POST /api/turismo/ticket** - Generate tourism tickets with share codes
+- **POST /api/turismo/verify-visit** - Verify visits with guide codes
+- **POST /api/turismo/rate-visit** - Rate tourism experiences
+- **GET /api/turismo/og/[code]** - Generate Open Graph images for tickets
+
+### Chat API
+
+- **POST /api/chat** - Send messages to Nachito AI assistant
+
+### More APIs
+
+- [Tourism API Reference](/api/tourism) - Detailed tourism endpoint documentation
+- [Chat API Reference](/api/chat) - AI chatbot integration
+
+## Authentication
+
+### Authenticated Endpoints
+
+Some endpoints require authentication using Supabase session tokens. Include the access token in the Authorization header:
+
+```bash
+Authorization: Bearer <access_token>
+```
+
+**Endpoints requiring authentication:**
+- POST /api/turismo/verify-visit
+- POST /api/turismo/rate-visit
+
+**Public endpoints:**
+- POST /api/turismo/ticket
+- POST /api/chat
+- GET /api/turismo/og/[code]
+
+### Getting an Access Token
+
+Use the Supabase client to authenticate users:
+
+```typescript
+import { supabase } from '@/lib/supabase';
+
+// Sign in with Google
+const { data } = await supabase.auth.signInWithOAuth({
+  provider: 'google'
+});
+
+// Get session token
+const { data: { session } } = await supabase.auth.getSession();
+const accessToken = session?.access_token;
+```
+
+## Request Format
+
+All POST requests must include a `Content-Type: application/json` header and a valid JSON body.
+
+```bash
+curl -X POST https://zongolica.gob.mx/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "¿Qué cascadas hay?"}'
+```
+
+## Response Format
+
+All responses are returned in JSON format:
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data
+  }
+}
+```
+
+### Error Response
+
+```json
+{
+  "error": "Error message",
+  "details": "Additional error information"
+}
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Success |
+| 400 | Bad Request - Invalid parameters |
+| 401 | Unauthorized - Missing or invalid authentication |
+| 404 | Not Found - Resource doesn't exist |
+| 429 | Too Many Requests - Rate limit exceeded |
+| 500 | Internal Server Error |
+| 502 | Bad Gateway - External service error |
+| 503 | Service Unavailable |
+
+### Example Error Handling
+
+```typescript
+try {
+  const response = await fetch('/api/turismo/verify-visit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({ code, userId })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('API Error:', error.error);
+    return;
+  }
+
+  const data = await response.json();
+  // Handle success
+} catch (error) {
+  console.error('Network error:', error);
+}
+```
+
+## Rate Limiting
+
+### Chat API Rate Limits
+
+The chat endpoint implements rate limiting to prevent abuse:
+
+- **Limit:** 20 requests per minute per IP address
+- **Window:** 60 seconds
+- **Response:** HTTP 429 with message indicating rate limit exceeded
+
+```json
+{
+  "reply": "Has enviado muchos mensajes. Espera un momento antes de volver a preguntar 😊"
+}
+```
+
+### Other Endpoints
+
+Other endpoints do not currently have explicit rate limits but should be used responsibly. Excessive requests may result in temporary IP blocking.
+
+## CORS Policy
+
+All API endpoints support CORS and can be called from the browser:
+
+- Credentials: Included
+- Methods: GET, POST, OPTIONS
+- Headers: Content-Type, Authorization
+
+## Best Practices
+
+### 1. Handle Errors Gracefully
+
+Always check response status codes and handle errors appropriately.
+
+### 2. Store Tokens Securely
+
+Never expose access tokens in client-side code or version control.
+
+### 3. Validate Input
+
+Validate user input before sending to the API to reduce failed requests.
+
+### 4. Use Timeouts
+
+Implement request timeouts to prevent hanging connections.
+
+```typescript
+const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+fetch('/api/chat', {
+  method: 'POST',
+  signal: controller.signal,
+  body: JSON.stringify({ message })
+});
+```
+
+### 5. Cache Responses
+
+Cache responses where appropriate (e.g., OG images) to reduce server load.
+
+## Support
+
+For API support and questions:
+
+- Email: turismo@zongolica.gob.mx
+- Documentation: https://zongolica.gob.mx/docs

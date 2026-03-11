@@ -1,0 +1,153 @@
+---
+title: Introduction
+description: Welcome to the Ayuntamiento de Zongolica official documentation
+---
+
+## What is Ayuntamiento de Zongolica?
+
+The **Ayuntamiento de Zongolica** is a comprehensive digital platform that serves as the official government portal and tourism system for the municipality of Zongolica, Veracruz, Mexico. This modern web application bridges government services with cultural preservation and tourism promotion.
+
+## Key Capabilities
+
+The platform combines two core systems:
+
+<CardGroup cols={2}>
+  <Card title="Government Portal" icon="landmark">
+    Access municipal services, institutional information, transparency documents, and administrative procedures all in one place.
+  </Card>
+  <Card title="Tourism System" icon="compass">
+    Discover Zongolica's natural wonders through personalized recommendations, interactive onboarding, and gamified exploration.
+  </Card>
+</CardGroup>
+
+### Government Services
+
+- **Institutional Information** - Learn about the municipal president, council members, and government structure
+- **Municipal Services** - Access online procedures, permits, and administrative services
+- **Transparency** - Download official documents, reports, and public information
+- **Directory** - Contact information for government officials and departments
+- **Call-to-Action Pages** - Important announcements and citizen alerts
+
+### Tourism Platform
+
+- **Xochitlanis** - Interactive tourism onboarding with personalized route recommendations
+- **17 Tourist Attractions** - Comprehensive guide to waterfalls, caves, viewpoints, and cultural sites
+- **Badge Gamification** - Unlock achievements by visiting attractions and completing challenges
+- **Ticket Generation** - Create shareable visual tickets with personalized routes
+- **User Profiles** - Save favorites, track visits, and build your travel history
+
+## Target Users
+
+<CardGroup cols={3}>
+  <Card title="Citizens" icon="users">
+    Access government services, perform online procedures, and stay informed about municipal activities.
+  </Card>
+  <Card title="Tourists" icon="backpack">
+    Discover attractions, plan personalized routes, and explore Zongolica's natural and cultural heritage.
+  </Card>
+  <Card title="Developers" icon="code">
+    Build on top of the platform's modern architecture and integrate with government services.
+  </Card>
+</CardGroup>
+
+## Tech Stack Overview
+
+The platform is built with modern web technologies optimized for performance and user experience:
+
+```json package.json
+{
+  "name": "h-ayuntamiento-zongo",
+  "type": "module",
+  "version": "0.0.1"
+}
+```
+
+### Core Technologies
+
+<CardGroup cols={2}>
+  <Card title="Astro" icon="rocket">
+    **Server-side rendering framework**
+    
+    Fast, content-focused architecture with support for React islands and multi-language routing.
+  </Card>
+  <Card title="React" icon="react">
+    **Interactive components**
+    
+    Used for dynamic UI elements like the tourism onboarding flow and authentication system.
+  </Card>
+  <Card title="Supabase" icon="database">
+    **Backend as a Service**
+    
+    PostgreSQL database, authentication (OAuth), storage for tickets, and real-time capabilities.
+  </Card>
+  <Card title="Vercel" icon="cloud">
+    **Deployment platform**
+    
+    Serverless functions, edge network, and automatic deployments from Git.
+  </Card>
+</CardGroup>
+
+### Supporting Technologies
+
+- **TailwindCSS** - Utility-first CSS framework with custom design system
+- **Three.js** - 3D graphics for immersive visual experiences
+- **GSAP** - Professional-grade animations
+- **Motion** - Advanced animation library for React components
+- **PhotoSwipe** - Responsive image gallery
+- **QRCode** - Generate shareable codes for routes
+- **Satori** - Convert HTML to images for social sharing
+
+## Multi-language Support
+
+The platform serves a diverse community with three language options:
+
+<Steps>
+  <Step title="Spanish (es)">
+    Default language for the majority of users
+  </Step>
+  <Step title="English (en)">
+    For international tourists and visitors
+  </Step>
+  <Step title="Nahuatl (nah-MX)">
+    Preserving indigenous language and culture of the region
+  </Step>
+</Steps>
+
+<Note>
+  Language routing is configured in `astro.config.mjs` with automatic locale detection and SEO-friendly URLs.
+</Note>
+
+## Architecture Highlights
+
+- **Server-Side Rendering (SSR)** - Dynamic content generation for optimal performance
+- **Island Architecture** - Hydrate only interactive components
+- **Type Safety** - Full TypeScript support across the codebase
+- **Responsive Design** - Mobile-first approach with adaptive layouts
+- **Accessibility** - WCAG compliant components and semantic HTML
+- **SEO Optimized** - Meta tags, structured data, and sitemap generation
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Get the platform running locally in under 5 minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Complete setup guide with all dependencies and configuration
+  </Card>
+</CardGroup>
+
+## Project Context
+
+Zongolica is located in the mountainous region of central Veracruz, Mexico, known for its:
+
+- **Natural Beauty** - Waterfalls, caves, natural arches, and pristine rivers
+- **Indigenous Culture** - Strong Nahuatl-speaking community with preserved traditions
+- **Adventure Tourism** - Rappelling, caving, hiking, and eco-tourism opportunities
+- **Religious Heritage** - Colonial-era churches and sacred sites
+
+This platform helps preserve and promote Zongolica's unique identity while modernizing government services for its citizens.
+
+<Warning>
+  This documentation covers the technical implementation. For user-facing guides, visit the official portal at your deployment URL.
+</Warning>

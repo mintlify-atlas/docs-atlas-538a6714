@@ -1,0 +1,310 @@
+---
+title: "Badge System"
+description: "Gamification system with badges for onboarding, actions, visits, and purchases in Zongolica Tourism"
+---
+
+# Badge Gamification System
+
+The Zongolica Tourism platform features a comprehensive badge system with **29 unique badges** that users can unlock through various activities: onboarding, actions, visiting attractions, and making purchases.
+
+<Note>
+  The badge system is defined in `src/lib/badges.ts` and uses Supabase for persistence in the `user_badges` table.
+</Note>
+
+## Badge Types
+
+Badges are categorized into four unlock types:
+
+<CardGroup cols={2}>
+  <Card title="Onboarding" icon="rocket">
+    Unlocked automatically when a user creates their travel profile
+  </Card>
+  <Card title="Action" icon="zap">
+    Earned by performing specific actions (favorites, routes, visits)
+  </Card>
+  <Card title="Visit" icon="map-pin">
+    Unlocked by visiting specific tourist attractions with guide verification
+  </Card>
+  <Card title="Purchase" icon="shopping-cart">
+    Awarded when purchasing tourism packages
+  </Card>
+</CardGroup>
+
+## Badge Interface
+
+```typescript src/lib/badges.ts
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  /** Unlock type */
+  unlockType: 'onboarding' | 'action' | 'visit' | 'purchase';
+  /** For 'action' type: how many actions needed */
+  actionCount?: number;
+  /** For 'visit' type: associated attraction slug */
+  atractivoSlug?: string;
+}
+```
+
+## Onboarding Badge
+
+Only **one badge** unlocks automatically upon profile creation:
+
+```typescript src/lib/badges.ts
+perfil_creado: {
+  id: 'perfil_creado',
+  name: 'Aventurero',
+  description: '¡Creaste tu perfil de viajero!',
+  icon: '🎒',
+  color: 'from-emerald-500 to-teal-500',
+  unlockType: 'onboarding',
+}
+```
+
+## Action Badges (6 badges)
+
+Earned through platform interactions:
+
+| Badge | Name | Description | Condition |
+|-------|------|-------------|----------|
+| 🎒 | Aventurero | Profile created | Onboarding |
+| ❤️ | Primer Favorito | First saved favorite | 1 favorite |
+| 💎 | Coleccionista | Collection growing | 5 favorites |
+| 🗺️ | Primera Ruta | First custom route | 1 route created |
+| 🧭 | Explorador | Sierra explorer | 5 visits |
+| 🏆 | Veterano Serrano | Sierra veteran | 10 visits |
+| 👑 | Leyenda de Zongolica | Complete all | 17 visits |
+
+```typescript src/lib/badges.ts
+leyenda: {
+  id: 'leyenda',
+  name: 'Leyenda de Zongolica',
+  description: '¡Visitaste los 17 atractivos!',
+  icon: '👑',
+  color: 'from-amber-300 to-yellow-500',
+  unlockType: 'action',
+  actionCount: 17,
+}
+```
+
+## Visit Badges (17 attractions)
+
+One badge for each of the 17 tourist attractions in Zongolica:
+
+<AccordionGroup>
+  <Accordion title="Religious & Historical Sites (4 badges)">
+    - ⛪ **La Pérgola** - Chapel on Tlaltiticuinco hill
+    - 🏛️ **El Calvario** - 1567 Franciscan temple
+    - 🙏 **San Francisco de Asís** - Parish with 8 murals and Señor del Recuerdo
+    - ✝️ **Cristo Rey** - 12-meter statue on Macuilxóchitl hill
+  </Accordion>
+
+  <Accordion title="Waterfalls & Rivers (4 badges)">
+    - 💧 **Cascada Atlahuitzía** - 120-meter waterfall
+    - 🛶 **Río Tonto** - River source in Huixtla
+    - 🏊 **Cascada El Coxole** - 10-meter deep pool
+    - 🏞️ **Río Macuilca** - Crystal-clear waters
+  </Accordion>
+
+  <Accordion title="Caves & Sótanos (5 badges)">
+    - 🕳️ **Sótano del Popócatl** - 70-meter descent
+    - 🦇 **Cueva Chicomeatl** - 400-meter cave
+    - 🐦 **Cueva de las Golondrinas** - Swallow cave
+    - 🧗 **Sótano del Gachupín** - 90-meter vertical descent
+    - 🕯️ **Cueva de Totomochapa** - 40-meter cave
+  </Accordion>
+
+  <Accordion title="Natural Formations & Viewpoints (4 badges)">
+    - 🏔️ **Arco Natural Boquerón** - 180-meter natural arch
+    - 🌄 **Mirador El Precipicio** - 200-meter viewpoint
+    - ⛰️ **Perfil del Cristo** - Christ profile in rock
+    - 🏚️ **Exhacienda de los Gachupines** - Colonial ruins
+  </Accordion>
+</AccordionGroup>
+
+### Example Visit Badge
+
+```typescript src/lib/badges.ts
+visit_atlahuitzia: {
+  id: 'visit_atlahuitzia',
+  name: 'Cascada Atlahuitzía',
+  description: 'Contemplaste la cascada de 120 metros',
+  icon: '💧',
+  color: 'from-cyan-500 to-blue-500',
+  unlockType: 'visit',
+  atractivoSlug: 'cascada-atlahuitzia',
+}
+```
+
+## Purchase Badges (2 badges)
+
+Awarded when users purchase tourism packages:
+
+```typescript src/lib/badges.ts
+primer_paquete: {
+  id: 'primer_paquete',
+  name: 'Primer Paquete',
+  description: '¡Compraste tu primer paquete turístico!',
+  icon: '🎫',
+  color: 'from-teal-500 to-emerald-500',
+  unlockType: 'purchase',
+},
+viajero_vip: {
+  id: 'viajero_vip',
+  name: 'Viajero VIP',
+  description: 'Has comprado 3 paquetes turísticos',
+  icon: '💳',
+  color: 'from-amber-400 to-yellow-500',
+  unlockType: 'purchase',
+  actionCount: 3,
+}
+```
+
+## Legacy Badges (13 badges)
+
+Legacy badges are maintained for users who already had them but are not shown in the collection:
+
+- 🏔️ Aventurero, 🌿 Guardián de la Naturaleza, 🧘 Zen, 👨‍👩‍👧‍👦 Familia
+- 💑 Romántico, 🏃 Maratonista, 💪 Extremo, 🎭 Explorador Cultural
+- 💧 Cazador de Cascadas, 📸 Coleccionista de Vistas
+- 🎨 Artesano, ⛺ Campista, 🍽️ Gourmet
+
+<Warning>
+  Legacy badges are excluded from `getCollectibleBadges()` to maintain clean UX for new users.
+</Warning>
+
+## Helper Functions
+
+### Get Badges
+
+```typescript src/lib/badges.ts
+/** Get onboarding badge only */
+export function getOnboardingBadge(): Badge {
+  return BADGES.perfil_creado;
+}
+
+/** Get badge by ID */
+export function getBadgeById(badgeId: string): Badge | undefined {
+  return BADGES[badgeId];
+}
+
+/** Get all badges */
+export function getAllBadges(): Badge[] {
+  return Object.values(BADGES);
+}
+
+/** Get collectible badges (excludes legacy) */
+export function getCollectibleBadges(): Badge[] {
+  return Object.values(BADGES).filter(b => !LEGACY_BADGE_IDS.includes(b.id));
+}
+
+/** Get attraction badges only */
+export function getAttractionBadges(): Badge[] {
+  return Object.values(BADGES).filter(b => b.unlockType === 'visit' && b.atractivoSlug);
+}
+
+/** Get badge by attraction slug */
+export function getBadgeByAtractivoSlug(slug: string): Badge | undefined {
+  return Object.values(BADGES).find(b => b.atractivoSlug === slug);
+}
+
+/** Get badges by unlock type */
+export function getBadgesByType(type: Badge['unlockType']): Badge[] {
+  return Object.values(BADGES).filter(b => b.unlockType === type);
+}
+```
+
+## Database Operations
+
+Badge data is persisted in Supabase (`src/lib/supabase.ts`):
+
+```typescript src/lib/supabase.ts
+export interface UserBadge {
+  id: string;
+  user_id: string;
+  badge_type: string;
+  unlocked_at: string;
+}
+
+/** Unlock a badge for a user */
+export async function unlockBadge(userId: string, badgeType: string) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .insert([{ user_id: userId, badge_type: badgeType }])
+    .select()
+    .single();
+  return { data, error };
+}
+
+/** Get all user badges */
+export async function getUserBadges(userId: string) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select('*')
+    .eq('user_id', userId)
+    .order('unlocked_at', { ascending: false });
+  return { data, error };
+}
+
+/** Check if user has a specific badge */
+export async function hasBadge(userId: string, badgeType: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('user_badges')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('badge_type', badgeType)
+    .single();
+  return !!data;
+}
+```
+
+## Badge Unlocking Logic
+
+### Automatic Unlocking
+
+Badges are automatically unlocked when conditions are met:
+
+1. **Onboarding**: When user creates profile
+2. **Favorites**: When adding to favorites (1st, 5th)
+3. **Routes**: When creating first custom route
+4. **Visits**: When marking attraction as visited (requires guide verification)
+5. **Purchases**: When completing package purchase (1st, 3rd)
+
+### Visit Verification
+
+<Note>
+  Visit badges require guide verification with a special code to prevent cheating.
+</Note>
+
+## UI Display
+
+Badges use Tailwind gradient classes for visual appeal:
+
+```tsx
+<div className={`badge ${badge.color}`}>
+  <span className="text-4xl">{badge.icon}</span>
+  <h3>{badge.name}</h3>
+  <p>{badge.description}</p>
+</div>
+```
+
+Gradient colors like `from-emerald-500 to-teal-500` create beautiful badge designs.
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Onboarding" icon="user-plus" href="/tourism/onboarding">
+    User onboarding and preference collection
+  </Card>
+  <Card title="Recommendations" icon="sparkles" href="/tourism/recommendations">
+    Xochitlanis recommendation engine
+  </Card>
+  <Card title="Attractions" icon="map" href="/tourism/attractions">
+    All 17 tourist attractions
+  </Card>
+  <Card title="Routes" icon="route" href="/tourism/routes">
+    User-created and official routes
+  </Card>
+</CardGroup>

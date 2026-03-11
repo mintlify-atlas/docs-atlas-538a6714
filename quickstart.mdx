@@ -1,80 +1,224 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get the Ayuntamiento de Zongolica platform running locally in 5 minutes
 ---
 
-## Get started in three steps
+## Get Running Quickly
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will have you up and running with the Ayuntamiento de Zongolica platform in under 5 minutes.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This quickstart uses Supabase for authentication and database. You'll need a free Supabase account to complete setup.
+</Note>
+
+<Steps>
+  <Step title="Prerequisites">
+    Ensure you have the following installed:
+    
+    - **Node.js** 18.14.1 or higher
+    - **npm** 9.0.0 or higher (comes with Node.js)
+    - **Git** for cloning the repository
+    
+    Check your versions:
+    ```bash
+    node --version
+    npm --version
+    ```
+  </Step>
+
+  <Step title="Clone the Repository">
+    Clone the source repository to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd h-ayuntamiento-zongo
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    This will install:
+    - Astro framework and integrations
+    - React and React DOM
+    - Supabase client
+    - TailwindCSS and UI dependencies
+    - Animation libraries (GSAP, Motion)
+    - Image processing tools
+  </Step>
+
+  <Step title="Set Up Environment Variables">
+    Create a `.env` file in the root directory:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Edit `.env` with your configuration:
+    
+    ```bash .env
+    # WordPress (optional for CMS integration)
+    WP_BASE_URL=
+    
+    # Email service (optional)
+    RESEND_API_KEY=
+    RESEND_FROM=
+    
+    # Backend secret (optional)
+    BACKEND_APP_SECRET=
+    
+    # Notion API (optional)
+    NOTION_API_MCP=
+    
+    # Supabase (required for auth and tourism features)
+    PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+    PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+    
+    # OpenAI (optional for AI features)
+    OPENAI_API_KEY=
+    ```
+    
+    <Warning>
+      At minimum, configure `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` to enable authentication and tourism features.
+    </Warning>
+  </Step>
+
+  <Step title="Configure Supabase (Optional but Recommended)">
+    If you want to use the tourism system:
+    
+    1. Create a free account at [supabase.com](https://supabase.com)
+    2. Create a new project
+    3. Go to **Settings > API** and copy:
+       - Project URL → `PUBLIC_SUPABASE_URL`
+       - anon/public key → `PUBLIC_SUPABASE_ANON_KEY`
+    4. Go to **SQL Editor** and run the setup script (see [Installation](/installation) for full SQL)
+    
+    <Note>
+      The platform will still run without Supabase, but authentication and tourism features will be disabled.
+    </Note>
+  </Step>
+
+  <Step title="Run the Development Server">
+    Start the Astro development server:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    You should see output like:
+    ```
+    🚀  astro  v5.16.6 started in 123ms
+    
+    ┃ Local    http://localhost:4321/
+    ┃ Network  use --host to expose
+    ```
+  </Step>
+
+  <Step title="Access the Portal">
+    Open your browser and navigate to:
+    
+    ```
+    http://localhost:4321
+    ```
+    
+    You should see the government portal homepage with:
+    - Municipal hero section
+    - Access links to government services
+    - Call-to-action banners
+    - Government axes grid
+  </Step>
+</Steps>
+
+## Explore Key Features
+
+Now that the platform is running, explore these key areas:
+
+<CardGroup cols={2}>
+  <Card title="Government Portal" icon="landmark" href="http://localhost:4321">
+    Main portal with institutional information
+  </Card>
+  <Card title="Tourism System" icon="compass" href="http://localhost:4321/turismo">
+    Interactive tourism platform (requires Supabase)
+  </Card>
+  <Card title="Xochitlanis" icon="flower" href="http://localhost:4321/xochitlanis">
+    Cultural event landing page with gallery
+  </Card>
+  <Card title="Transparency" icon="file-text" href="http://localhost:4321/transparencia">
+    Government transparency and downloads
+  </Card>
+</CardGroup>
+
+## Available Commands
+
+All commands are run from the root of the project:
+
+| Command | Action |
+| :--- | :--- |
+| `npm install` | Install dependencies |
+| `npm run dev` | Start local dev server at `localhost:4321` |
+| `npm run build` | Build production site to `./dist/` |
+| `npm run preview` | Preview production build locally |
+| `npm run astro ...` | Run Astro CLI commands |
+| `npm run test:routes` | Build and run Playwright route tests |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Complete Installation" icon="wrench" href="/installation">
+    Set up database, OAuth providers, and deployment
+  </Card>
+  <Card title="Government Portal Features" icon="landmark" href="/features/government-portal">
+    Learn about institutional pages and services
+  </Card>
+  <Card title="Tourism System" icon="map" href="/features/tourism-system">
+    Understand the Xochitlanis platform and onboarding
+  </Card>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    Configure OAuth and user management
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 4321 already in use">
+    If port 4321 is already in use, you can specify a different port:
+    
+    ```bash
+    npm run dev -- --port 3000
+    ```
+  </Accordion>
+  
+  <Accordion title="Module not found errors">
+    If you see module resolution errors, try:
+    
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+  
+  <Accordion title="Supabase connection errors">
+    Verify your environment variables:
+    
+    1. Check `.env` has correct `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY`
+    2. Restart the dev server after changing `.env`
+    3. Verify your Supabase project is active at [app.supabase.com](https://app.supabase.com)
+  </Accordion>
+  
+  <Accordion title="Build errors with TailwindCSS">
+    The project uses TailwindCSS v4 with Vite plugin. Make sure you have:
+    
+    ```bash
+    npm install @tailwindcss/vite@^4.1.18
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  For production deployment, see the [Installation](/installation) guide for complete setup including database initialization and OAuth configuration.
 </Note>

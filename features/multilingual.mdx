@@ -1,0 +1,613 @@
+---
+title: Multi-language Support
+description: Spanish, English, and Nahuatl localization for the Ayuntamiento de Zongolica platform
+---
+
+## Overview
+
+The Ayuntamiento de Zongolica platform supports three languages to serve its diverse user base:
+
+<CardGroup cols={3}>
+  <Card title="Español (es)" icon="flag">
+    **Default language**
+    
+    Primary language for citizens and Spanish-speaking visitors
+  </Card>
+  
+  <Card title="English (en)" icon="flag">
+    **International support**
+    
+    For foreign tourists and English-speaking visitors
+  </Card>
+  
+  <Card title="Náhuatl (nah-MX)" icon="flower">
+    **Indigenous language**
+    
+    Preserving the cultural heritage of Zongolica's Nahuatl-speaking community
+  </Card>
+</CardGroup>
+
+<Note>
+  Nahuatl (Náhuatl) is an indigenous language spoken by a significant portion of Zongolica's population, making it essential for inclusive government communication.
+</Note>
+
+## i18n Configuration
+
+The internationalization system is configured in `astro.config.mjs`:
+
+```javascript astro.config.mjs
+import { defineConfig } from 'astro/config';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@astrojs/react';
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  output: 'server',
+  adapter: vercel(),
+  vite: {
+    plugins: [tailwindcss()]
+  },
+  i18n: {
+    locales: ["es", "en", "nah-MX"],
+    defaultLocale: "es",
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
+  integrations: [react()]
+});
+```
+
+### Key Configuration Options
+
+<ResponseField name="locales" type="string[]">
+  Array of supported language codes:
+  - `"es"` - Spanish
+  - `"en"` - English
+  - `"nah-MX"` - Nahuatl (Mexico variant)
+</ResponseField>
+
+<ResponseField name="defaultLocale" type="string" default="es">
+  Default language when no locale is specified in the URL
+</ResponseField>
+
+<ResponseField name="routing.prefixDefaultLocale" type="boolean" default="false">
+  When `false`, Spanish pages don't require `/es` prefix:
+  - Spanish: `/turismo` (no prefix)
+  - English: `/en/turismo`
+  - Nahuatl: `/nah-MX/turismo`
+</ResponseField>
+
+## Language Routing
+
+### URL Structure
+
+The platform uses path-based routing for languages:
+
+**Spanish (default):**
+```
+https://zongolica.gob.mx/
+https://zongolica.gob.mx/turismo
+https://zongolica.gob.mx/gobierno
+```
+
+**English:**
+```
+https://zongolica.gob.mx/en
+https://zongolica.gob.mx/en/turismo
+https://zongolica.gob.mx/en/gobierno
+```
+
+**Nahuatl:**
+```
+https://zongolica.gob.mx/nah-MX
+https://zongolica.gob.mx/nah-MX/turismo
+https://zongolica.gob.mx/nah-MX/gobierno
+```
+
+### File Structure
+
+Pages are organized by locale in the `src/pages/` directory:
+
+```
+src/pages/
+├── index.astro                    # Spanish (default)
+├── turismo/
+│   ├── index.astro
+│   └── atractivos/
+├── xochitlanis/
+│   ├── index.astro              # Spanish version
+│   └── pase/[token].astro
+├── en/                          # English pages
+│   ├── xochitlanis/
+│   │   ├── index.astro
+│   │   └── pase/[token].astro
+│   └── xochitlallis/
+├── nah-MX/                      # Nahuatl pages
+│   ├── xochitlanis/
+│   │   ├── index.astro
+│   │   └── pase/[token].astro
+│   └── xochitlallis/
+└── es/                          # Explicit Spanish pages (optional)
+    ├── xochitlanis/
+    └── xochitlallis/
+```
+
+<Warning>
+  Not all pages need to be translated into all languages. The Xochitlanis cultural event pages are prioritized for multi-language support.
+</Warning>
+
+## Translation Data Structure
+
+Translations are stored as JSON files in `src/i18n/`:
+
+```
+src/i18n/
+├── xochitlanis/
+│   ├── es.json
+│   ├── en.json
+│   └── nah-MX.json
+└── xochitlallis/
+    ├── es.json
+    ├── en.json
+    └── nah-MX.json
+```
+
+### Translation File Example
+
+**Spanish (es.json):**
+
+```json src/i18n/xochitlanis/es.json
+{
+  "SEO_TITLE": "Revive el Xochitlallis 2026 · Zongolica",
+  "SEO_DESCRIPTION": "Revive los mejores momentos del Xochitlallis 2026 en Zongolica. Galería de fotos, reels y la esencia de esta ceremonia nahua.",
+  "BACK_TO_PORTAL": "Volver al portal",
+  "HERO_EYEBROW": "Revive Xochitlallis 2026",
+  "HERO_TITLE": "Gracias por ser parte del",
+  "HERO_TITLE_EMPH": "Xochitlallis 2026.",
+  "HERO_LEAD": "El 5 y 6 de marzo Zongolica vibró con la ceremonia nahua milenaria de agradecimiento a la Madre Tierra.",
+  "STAT_ENTRY_VALUE": "Libre",
+  "STAT_DATE_VALUE": "5 y 6 de marzo",
+  "STAT_VENUE_VALUE": "Parque Juan Moctezuma y Cortés",
+  "CTA_PRIMARY": "VER GALERÍA",
+  "GALLERY_TITLE": "Los mejores momentos del Xochitlallis 2026"
+}
+```
+
+**English (en.json):**
+
+```json src/i18n/xochitlanis/en.json
+{
+  "SEO_TITLE": "Relive Xochitlallis 2026 · Zongolica",
+  "SEO_DESCRIPTION": "Relive the best moments of Xochitlallis 2026 in Zongolica. Photo gallery, reels and the essence of this Nahua ceremony.",
+  "BACK_TO_PORTAL": "Back to portal",
+  "HERO_EYEBROW": "Relive Xochitlallis 2026",
+  "HERO_TITLE": "Thank you for being part of",
+  "HERO_TITLE_EMPH": "Xochitlallis 2026.",
+  "HERO_LEAD": "On March 5 and 6, Zongolica vibrated with the ancient Nahua ceremony of gratitude to Mother Earth.",
+  "STAT_ENTRY_VALUE": "Free",
+  "STAT_DATE_VALUE": "March 5-6",
+  "STAT_VENUE_VALUE": "Juan Moctezuma y Cortés Park",
+  "CTA_PRIMARY": "VIEW GALLERY",
+  "GALLERY_TITLE": "The best moments of Xochitlallis 2026"
+}
+```
+
+**Nahuatl (nah-MX.json):**
+
+```json src/i18n/xochitlanis/nah-MX.json
+{
+  "SEO_TITLE": "Xochitlallis 2026 · Zongolica",
+  "SEO_DESCRIPTION": "Nochi tlakatok ipan Xochitlallis 2026 Zongolica. Galeria, video wan ceremonia nahua.",
+  "BACK_TO_PORTAL": "Occepa portal",
+  "HERO_EYEBROW": "Xochitlallis 2026",
+  "HERO_TITLE": "Tlazohcamati pampa",
+  "HERO_TITLE_EMPH": "Xochitlallis 2026.",
+  "HERO_LEAD": "Ipan marzo 5 wan 6, Zongolica kipia ceremonia nahua para tlazohcamati Tonantzin Tlalli.",
+  "STAT_ENTRY_VALUE": "Amo tlaxtlahuilli",
+  "STAT_DATE_VALUE": "Marzo 5 wan 6",
+  "STAT_VENUE_VALUE": "Parque Juan Moctezuma wan Cortés",
+  "CTA_PRIMARY": "GALERIA",
+  "GALLERY_TITLE": "Nochi tlakatok Xochitlallis 2026"
+}
+```
+
+<Note>
+  Nahuatl translations should be reviewed by native speakers to ensure cultural accuracy and proper usage.
+</Note>
+
+## Using Translations in Pages
+
+### Loading Translation Data
+
+```astro src/pages/nah-MX/xochitlanis/index.astro
+---
+import Layout from "@/layouts/Layout.astro";
+
+// Import translation data
+import t from "@/i18n/xochitlanis/nah-MX.json";
+
+const lang = "nah-MX";
+---
+
+<Layout
+  title={t.SEO_TITLE}
+  description={t.SEO_DESCRIPTION}
+  lang={lang}
+>
+  <main>
+    <h1>{t.HERO_TITLE} <em>{t.HERO_TITLE_EMPH}</em></h1>
+    <p>{t.HERO_LEAD}</p>
+    <button>{t.CTA_PRIMARY}</button>
+  </main>
+</Layout>
+```
+
+### Dynamic Locale Detection
+
+For shared components, detect the current locale:
+
+```astro
+---
+const { currentLocale } = Astro;
+const locale = currentLocale || 'es';
+
+let t;
+if (locale === 'en') {
+  t = await import(`@/i18n/xochitlanis/en.json`);
+} else if (locale === 'nah-MX') {
+  t = await import(`@/i18n/xochitlanis/nah-MX.json`);
+} else {
+  t = await import(`@/i18n/xochitlanis/es.json`);
+}
+---
+```
+
+## Language Switching
+
+### Language Selector Component
+
+Create a language switcher for the navigation:
+
+```astro LanguageSwitcher.astro
+---
+const { currentLocale, url } = Astro;
+const currentPath = url.pathname;
+
+// Generate alternate language URLs
+function getLocalizedUrl(locale: string) {
+  if (locale === 'es') {
+    // Remove locale prefix for Spanish
+    return currentPath.replace(/^\/(en|nah-MX)/, '') || '/';
+  }
+  // Add locale prefix
+  const basePath = currentPath.replace(/^\/(en|nah-MX)/, '') || '/';
+  return `/${locale}${basePath}`;
+}
+
+const languages = [
+  { code: 'es', name: 'Español', flag: '🇲🇽' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'nah-MX', name: 'Náhuatl', flag: '🌺' }
+];
+---
+
+<div class="language-switcher">
+  {languages.map(lang => (
+    <a 
+      href={getLocalizedUrl(lang.code)}
+      class:list={[
+        "lang-option",
+        { active: currentLocale === lang.code }
+      ]}
+      aria-label={`Switch to ${lang.name}`}
+    >
+      <span class="flag">{lang.flag}</span>
+      <span class="name">{lang.name}</span>
+    </a>
+  ))}
+</div>
+
+<style>
+  .language-switcher {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .lang-option {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background 0.2s;
+  }
+  
+  .lang-option:hover {
+    background: rgba(255, 130, 0, 0.1);
+  }
+  
+  .lang-option.active {
+    background: #ff8200;
+    color: white;
+  }
+</style>
+```
+
+### SEO Alternate Links
+
+Add alternate language links for SEO:
+
+```astro Layout.astro
+---
+const { lang = 'es', url } = Astro.props;
+const canonicalURL = new URL(url, Astro.site);
+
+// Generate alternate URLs
+const alternateUrls = [
+  { lang: 'es', url: getLocalizedUrl('es') },
+  { lang: 'en', url: getLocalizedUrl('en') },
+  { lang: 'nah-MX', url: getLocalizedUrl('nah-MX') }
+];
+---
+
+<head>
+  <meta charset="UTF-8" />
+  <html lang={lang}>
+  <link rel="canonical" href={canonicalURL} />
+  
+  {alternateUrls.map(alt => (
+    <link 
+      rel="alternate" 
+      hreflang={alt.lang} 
+      href={new URL(alt.url, Astro.site)} 
+    />
+  ))}
+  
+  <link rel="alternate" hreflang="x-default" href={canonicalURL} />
+</head>
+```
+
+## Translation Keys Convention
+
+Follow these naming conventions for translation keys:
+
+### SEO and Meta
+
+```json
+{
+  "SEO_TITLE": "Page title for search engines",
+  "SEO_DESCRIPTION": "Meta description for SEO",
+  "OG_TITLE": "Open Graph title for social sharing",
+  "OG_DESCRIPTION": "Open Graph description"
+}
+```
+
+### Content Sections
+
+```json
+{
+  "HERO_EYEBROW": "Small text above heading",
+  "HERO_TITLE": "Main heading",
+  "HERO_LEAD": "Lead paragraph",
+  "HERO_IMAGE_ALT": "Alt text for images"
+}
+```
+
+### UI Elements
+
+```json
+{
+  "CTA_PRIMARY": "Primary button text",
+  "CTA_SECONDARY": "Secondary button text",
+  "BACK_TO_PORTAL": "Navigation link",
+  "STAT_LABEL": "Label for statistics",
+  "STAT_VALUE": "Value for statistics"
+}
+```
+
+### Dates and Times
+
+```json
+{
+  "COUNTDOWN_TARGET": "2026-03-05T07:00:00-06:00",
+  "COUNTDOWN_DAYS": "Days",
+  "COUNTDOWN_HOURS": "Hours",
+  "COUNTDOWN_MINUTES": "Min",
+  "COUNTDOWN_SECONDS": "Sec"
+}
+```
+
+## Currently Translated Pages
+
+The following pages have full multi-language support:
+
+### Xochitlanis Pages
+
+<AccordionGroup>
+  <Accordion title="Landing Page" icon="home">
+    **Routes:**
+    - `/xochitlanis` (Spanish)
+    - `/en/xochitlanis` (English)
+    - `/nah-MX/xochitlanis` (Nahuatl)
+    
+    **Features:**
+    - Event information
+    - Photo gallery
+    - Video reels
+    - Raffle results
+  </Accordion>
+  
+  <Accordion title="Digital Pass" icon="ticket">
+    **Routes:**
+    - `/xochitlanis/pase/[token]` (Spanish)
+    - `/en/xochitlanis/pase/[token]` (English)
+    - `/nah-MX/xochitlanis/pase/[token]` (Nahuatl)
+    
+    **Features:**
+    - QR code ticket
+    - Attendee information
+    - Event details
+  </Accordion>
+</AccordionGroup>
+
+### Xochitlallis Pages
+
+Similar structure to Xochitlanis:
+- `/xochitlallis` + localized versions
+- `/xochitlallis/pase/[token]` + localized versions
+
+<Note>
+  Additional pages can be translated by creating the corresponding locale folders and translation JSON files.
+</Note>
+
+## Expanding Translation Coverage
+
+### Adding New Translated Pages
+
+<Steps>
+  <Step title="Create locale-specific page files">
+    ```bash
+    mkdir -p src/pages/en/gobierno
+    mkdir -p src/pages/nah-MX/gobierno
+    ```
+  </Step>
+  
+  <Step title="Create translation JSON files">
+    ```bash
+    mkdir -p src/i18n/gobierno
+    touch src/i18n/gobierno/es.json
+    touch src/i18n/gobierno/en.json
+    touch src/i18n/gobierno/nah-MX.json
+    ```
+  </Step>
+  
+  <Step title="Populate translation files">
+    Extract all user-facing strings from the Spanish version into `es.json`:
+    
+    ```json es.json
+    {
+      "PAGE_TITLE": "Gobierno Municipal",
+      "PAGE_DESCRIPTION": "Conoce al gobierno",
+      "SECTION_PRESIDENT": "Presidente Municipal",
+      "SECTION_SINDICO": "Síndico"
+    }
+    ```
+  </Step>
+  
+  <Step title="Translate to other languages">
+    Create corresponding translations:
+    
+    ```json en.json
+    {
+      "PAGE_TITLE": "Municipal Government",
+      "PAGE_DESCRIPTION": "Meet the government",
+      "SECTION_PRESIDENT": "Municipal President",
+      "SECTION_SINDICO": "Trustee"
+    }
+    ```
+  </Step>
+  
+  <Step title="Update page to use translations">
+    ```astro src/pages/en/gobierno/index.astro
+    ---
+    import Layout from "@/layouts/Layout.astro";
+    import t from "@/i18n/gobierno/en.json";
+    ---
+    
+    <Layout title={t.PAGE_TITLE} description={t.PAGE_DESCRIPTION} lang="en">
+      <h1>{t.PAGE_TITLE}</h1>
+      <!-- Use t.* for all strings -->
+    </Layout>
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Consistent Keys" icon="key">
+    Use the same translation keys across all languages for maintainability
+  </Card>
+  
+  <Card title="Cultural Context" icon="globe">
+    Consider cultural differences, not just literal translations
+  </Card>
+  
+  <Card title="Native Review" icon="users">
+    Have native speakers review translations, especially for Nahuatl
+  </Card>
+  
+  <Card title="SEO Optimization" icon="search">
+    Translate meta titles and descriptions for better international SEO
+  </Card>
+</CardGroup>
+
+### Handling Untranslated Content
+
+For pages not yet translated:
+
+```astro
+---
+const { currentLocale } = Astro;
+
+// Fallback to Spanish if translation doesn't exist
+let t;
+try {
+  t = await import(`@/i18n/gobierno/${currentLocale}.json`);
+} catch {
+  t = await import(`@/i18n/gobierno/es.json`);
+  // Optionally show a notice
+}
+---
+
+{currentLocale !== 'es' && (
+  <div class="translation-notice">
+    🌐 This page is not yet available in {currentLocale}. Showing Spanish version.
+  </div>
+)}
+```
+
+## Date and Time Localization
+
+Format dates according to locale:
+
+```typescript
+const dateFormatter = new Intl.DateTimeFormat(locale, {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+
+const formattedDate = dateFormatter.format(new Date('2026-03-05'));
+// es: "5 de marzo de 2026"
+// en: "March 5, 2026"
+// nah-MX: Use custom formatting if needed
+```
+
+## Number Localization
+
+Format numbers and currency:
+
+```typescript
+const numberFormatter = new Intl.NumberFormat(locale);
+const price = numberFormatter.format(1500);
+// es: "1.500"
+// en: "1,500"
+
+const currencyFormatter = new Intl.NumberFormat(locale, {
+  style: 'currency',
+  currency: 'MXN'
+});
+const formattedPrice = currencyFormatter.format(1500);
+// es: "$1,500.00"
+// en: "MX$1,500.00"
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    Learn about the user authentication system
+  </Card>
+  <Card title="Government Portal" icon="landmark" href="/features/government-portal">
+    Explore government portal features
+  </Card>
+</CardGroup>

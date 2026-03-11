@@ -1,0 +1,476 @@
+---
+title: Database Configuration
+description: Detailed guide to database schema, relationships, and migration management
+---
+
+## Overview
+
+The Ayuntamiento de Zongolica application uses PostgreSQL through Supabase, with a carefully designed schema for tourism route personalization, user preferences, and gamification.
+
+## Database Schema
+
+### Entity Relationship Diagram
+
+```
+auth.users (Supabase managed)
+    │
+    ├─── user_preferences (1:1)
+    │
+    ├─── user_routes (1:N)
+    │
+    └─── user_badges (1:N)
+```
+
+## Table Schemas
+
+### user_preferences
+
+Stores user onboarding responses for personalized recommendations.
+
+```sql
+CREATE TABLE user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  experiencia TEXT[] NOT NULL,
+  duracion TEXT NOT NULL,
+  dificultad TEXT NOT NULL,
+  grupo TEXT NOT NULL,
+  intereses TEXT[] NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Columns
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Auto-generated unique identifier |
+| `user_id` | UUID | FOREIGN KEY, NOT NULL | References `auth.users(id)` |
+| `experiencia` | TEXT[] | NOT NULL | Travel experience types: `['aventura', 'cultura', 'naturaleza', 'gastronomia']` |
+| `duracion` | TEXT | NOT NULL | Trip duration: `'medio-dia'`, `'dia-completo'`, `'varios-dias'` |
+| `dificultad` | TEXT | NOT NULL | Difficulty level: `'facil'`, `'moderado'`, `'dificil'` |
+| `grupo` | TEXT | NOT NULL | Travel group: `'solo'`, `'pareja'`, `'familia'`, `'amigos'` |
+| `intereses` | TEXT[] | NOT NULL | Specific interests: `['cascadas', 'miradores', 'artesanias', ...]` |
+| `created_at` | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | Timestamp when preferences were saved |
+
+#### Example Data
+
+```sql
+INSERT INTO user_preferences (
+  user_id, 
+  experiencia, 
+  duracion, 
+  dificultad, 
+  grupo, 
+  intereses
+) VALUES (
+  '550e8400-e29b-41d4-a716-446655440000',
+  ARRAY['aventura', 'naturaleza'],
+  'dia-completo',
+  'moderado',
+  'familia',
+  ARRAY['cascadas', 'miradores', 'senderismo']
+);
+```
+
+### user_routes
+
+Stores generated personalized routes with sharing functionality.
+
+```sql
+CREATE TABLE user_routes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  route_name TEXT NOT NULL,
+  atractivos TEXT[] NOT NULL,
+  ticket_url TEXT NOT NULL,
+  share_code TEXT UNIQUE NOT NULL,
+  badges TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+#### Columns
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Auto-generated unique identifier |
+| `user_id` | UUID | FOREIGN KEY, NOT NULL | References `auth.users(id)` |
+| `route_name` | TEXT | NOT NULL | Generated route name |
+| `atractivos` | TEXT[] | NOT NULL | Array of attraction names in the route |
+| `ticket_url` | TEXT | NOT NULL | URL to generated ticket image in storage |
+| `share_code` | TEXT | UNIQUE, NOT NULL | Short code for sharing (e.g., `'abc123xyz'`) |
+| `badges` | TEXT[] | DEFAULT '{}' | Array of unlocked badge IDs |
+| `created_at` | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | Route creation timestamp |
+
+#### Example Data
+
+```sql
+INSERT INTO user_routes (
+  user_id,
+  route_name,
+  atractivos,
+  ticket_url,
+  share_code,
+  badges
+) VALUES (
+  '550e8400-e29b-41d4-a716-446655440000',
+  'Aventura Familiar en la Sierra',
+  ARRAY['Cascada de Texolo', 'Mirador del Águila', 'Centro Histórico'],
+  'https://project.supabase.co/storage/v1/object/public/tickets/user-id/ticket.png',
+  'xY9mKp',
+  ARRAY['aventurero', 'familia', 'cazador_cascadas']
+);
+```
+
+### user_badges
+
+Tracks unlocked achievement badges for gamification.
+
+```sql
+CREATE TABLE user_badges (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  badge_type TEXT NOT NULL,
+  unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, badge_type)
+);
+```
+
+#### Columns
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | UUID | PRIMARY KEY | Auto-generated unique identifier |
+| `user_id` | UUID | FOREIGN KEY, NOT NULL | References `auth.users(id)` |
+| `badge_type` | TEXT | NOT NULL | Badge identifier (e.g., `'aventurero'`, `'gourmet'`) |
+| `unlocked_at` | TIMESTAMP WITH TIME ZONE | DEFAULT NOW() | When the badge was unlocked |
+
+#### Constraints
+
+- `UNIQUE(user_id, badge_type)` - Prevents duplicate badges for the same user
+
+#### Example Data
+
+```sql
+INSERT INTO user_badges (user_id, badge_type) 
+VALUES 
+  ('550e8400-e29b-41d4-a716-446655440000', 'aventurero'),
+  ('550e8400-e29b-41d4-a716-446655440000', 'familia'),
+  ('550e8400-e29b-41d4-a716-446655440000', 'primera_ruta')
+ON CONFLICT (user_id, badge_type) DO NOTHING;
+```
+
+## Indexes and Constraints
+
+### Performance Indexes
+
+Optimized queries for common access patterns:
+
+```sql
+-- Lookup user's preferences
+CREATE INDEX idx_user_preferences_user_id 
+  ON user_preferences(user_id);
+
+-- Lookup user's routes
+CREATE INDEX idx_user_routes_user_id 
+  ON user_routes(user_id);
+
+-- Find route by share code (for sharing feature)
+CREATE INDEX idx_user_routes_share_code 
+  ON user_routes(share_code);
+
+-- Lookup user's badges
+CREATE INDEX idx_user_badges_user_id 
+  ON user_badges(user_id);
+```
+
+### Foreign Key Relationships
+
+All user data is linked to `auth.users` with cascading deletes:
+
+```sql
+user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL
+```
+
+<Note>
+`ON DELETE CASCADE` ensures that when a user is deleted, all their preferences, routes, and badges are automatically removed.
+</Note>
+
+### Unique Constraints
+
+```sql
+-- Prevent duplicate share codes
+ALTER TABLE user_routes ADD CONSTRAINT user_routes_share_code_key 
+  UNIQUE (share_code);
+
+-- Prevent duplicate badges per user
+ALTER TABLE user_badges ADD CONSTRAINT user_badges_user_id_badge_type_key 
+  UNIQUE (user_id, badge_type);
+```
+
+## Row Level Security (RLS) Policies
+
+### user_preferences Policies
+
+```sql
+-- Enable RLS
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+
+-- Users can only SELECT their own preferences
+CREATE POLICY "Users can view their own preferences"
+  ON user_preferences FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can only INSERT their own preferences
+CREATE POLICY "Users can create their own preferences"
+  ON user_preferences FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can only UPDATE their own preferences
+CREATE POLICY "Users can update their own preferences"
+  ON user_preferences FOR UPDATE
+  USING (auth.uid() = user_id);
+```
+
+### user_routes Policies
+
+```sql
+ALTER TABLE user_routes ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view routes (required for sharing)
+CREATE POLICY "Anyone can view routes"
+  ON user_routes FOR SELECT
+  USING (true);
+
+-- Users can create their own routes
+CREATE POLICY "Users can create their own routes"
+  ON user_routes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can only update their own routes
+CREATE POLICY "Users can update their own routes"
+  ON user_routes FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Users can only delete their own routes
+CREATE POLICY "Users can delete their own routes"
+  ON user_routes FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+<Warning>
+The `SELECT` policy on `user_routes` allows public access. This is intentional for the sharing feature but means route data is not private.
+</Warning>
+
+### user_badges Policies
+
+```sql
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can view badges
+CREATE POLICY "Anyone can view badges"
+  ON user_badges FOR SELECT
+  USING (true);
+
+-- Users can create their own badges
+CREATE POLICY "Users can create their own badges"
+  ON user_badges FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+```
+
+## Database Functions
+
+### get_user_stats
+
+Utility function to retrieve user statistics:
+
+```sql
+CREATE OR REPLACE FUNCTION get_user_stats(user_uuid UUID)
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+BEGIN
+  SELECT json_build_object(
+    'total_routes', (
+      SELECT COUNT(*) FROM user_routes WHERE user_id = user_uuid
+    ),
+    'total_badges', (
+      SELECT COUNT(*) FROM user_badges WHERE user_id = user_uuid
+    ),
+    'latest_route', (
+      SELECT route_name 
+      FROM user_routes 
+      WHERE user_id = user_uuid 
+      ORDER BY created_at DESC 
+      LIMIT 1
+    ),
+    'created_at', (
+      SELECT created_at 
+      FROM user_routes 
+      WHERE user_id = user_uuid 
+      ORDER BY created_at ASC 
+      LIMIT 1
+    )
+  ) INTO result;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### Usage
+
+```typescript
+const { data, error } = await supabase.rpc('get_user_stats', {
+  user_uuid: userId
+});
+
+// Returns:
+// {
+//   total_routes: 3,
+//   total_badges: 5,
+//   latest_route: "Aventura en la Sierra",
+//   created_at: "2024-03-15T10:30:00Z"
+// }
+```
+
+## Migration Management
+
+### Initial Setup
+
+Run the complete setup script:
+
+```sql
+-- From supabase-setup.sql
+-- Creates tables, indexes, RLS policies, and functions
+```
+
+### Future Migrations
+
+For schema changes:
+
+1. **Create migration file**:
+   ```sql
+   -- migrations/002_add_route_rating.sql
+   ALTER TABLE user_routes ADD COLUMN rating INTEGER CHECK (rating >= 1 AND rating <= 5);
+   CREATE INDEX idx_user_routes_rating ON user_routes(rating);
+   ```
+
+2. **Test in development**:
+   ```bash
+   # Run against development Supabase project first
+   ```
+
+3. **Apply to production**:
+   ```bash
+   # Run in Supabase SQL Editor or use Supabase CLI
+   ```
+
+<Note>
+Supabase provides a SQL Editor with migration history. Always test migrations in development before applying to production.
+</Note>
+
+## Query Examples
+
+### Get User's Routes with Badges
+
+```typescript
+const { data: routes } = await supabase
+  .from('user_routes')
+  .select('*')
+  .eq('user_id', userId)
+  .order('created_at', { ascending: false });
+```
+
+### Find Route by Share Code
+
+```typescript
+const { data: route } = await supabase
+  .from('user_routes')
+  .select('*')
+  .eq('share_code', shareCode)
+  .single();
+```
+
+### Get All User Badges
+
+```typescript
+const { data: badges } = await supabase
+  .from('user_badges')
+  .select('badge_type, unlocked_at')
+  .eq('user_id', userId)
+  .order('unlocked_at', { ascending: false });
+```
+
+### Create Route with Transaction
+
+```typescript
+// Insert route and badges atomically
+const { data: route, error: routeError } = await supabase
+  .from('user_routes')
+  .insert({
+    user_id: userId,
+    route_name: 'My Adventure',
+    atractivos: ['Place 1', 'Place 2'],
+    ticket_url: ticketUrl,
+    share_code: generateShareCode(),
+    badges: ['badge1', 'badge2']
+  })
+  .select()
+  .single();
+
+if (route) {
+  // Create badge records
+  await supabase.from('user_badges').insert(
+    route.badges.map(badge => ({
+      user_id: userId,
+      badge_type: badge
+    }))
+  );
+}
+```
+
+## Backup and Recovery
+
+### Supabase Automatic Backups
+
+Supabase provides:
+- **Daily backups** (retained for 7 days on free tier)
+- **Point-in-time recovery** (Pro plan only)
+
+### Manual Backup
+
+Export data periodically:
+
+```sql
+-- Export as CSV
+COPY user_routes TO '/path/to/backup.csv' DELIMITER ',' CSV HEADER;
+
+-- Or use Supabase Dashboard: Table Editor → Export as CSV
+```
+
+## Performance Optimization
+
+### Query Optimization Tips
+
+1. **Use indexes**: All foreign keys are indexed
+2. **Limit results**: Use `.limit()` for pagination
+3. **Select specific columns**: Don't use `SELECT *` in production
+4. **Use connection pooling**: Supabase handles this automatically
+
+### Monitoring
+
+Monitor database performance in Supabase:
+- **Database** → **Reports** for query performance
+- **Logs** for slow queries
+- **Table Editor** to check data growth
+
+## Next Steps
+
+After setting up the database:
+
+1. [Configure storage buckets](/deployment/storage)
+2. [Set up authentication](/deployment/oauth)
+3. [Test with sample data](/deployment/database#example-data)
+4. Monitor performance in Supabase dashboard

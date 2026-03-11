@@ -1,0 +1,457 @@
+---
+title: 'Database Migrations'
+description: 'SQL migration scripts for setting up Supabase database'
+icon: 'code-commit'
+---
+
+## Overview
+
+This page contains the SQL migration scripts needed to set up the complete database schema for the Zongolica application in Supabase.
+
+<Note>
+  Execute these scripts in the **Supabase SQL Editor**: `https://app.supabase.com/project/_/sql`
+</Note>
+
+---
+
+## Complete Setup Script
+
+This script creates all tables, indexes, RLS policies, and storage buckets.
+
+```sql
+-- =====================================================
+-- SCRIPT SQL PARA SUPABASE - RUTA ZONGOLICA MVP
+-- =====================================================
+-- Ejecuta este script en el SQL Editor de Supabase
+-- https://app.supabase.com/project/_/sql
+
+-- 1. Tabla de preferencias de usuario
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  experiencia TEXT[] NOT NULL,
+  duracion TEXT NOT NULL,
+  dificultad TEXT NOT NULL,
+  grupo TEXT NOT NULL,
+  intereses TEXT[] NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Tabla de rutas generadas
+CREATE TABLE IF NOT EXISTS user_routes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  route_name TEXT NOT NULL,
+  atractivos TEXT[] NOT NULL,
+  ticket_url TEXT NOT NULL,
+  share_code TEXT UNIQUE NOT NULL,
+  badges TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Tabla de insignias desbloqueadas
+CREATE TABLE IF NOT EXISTS user_badges (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  badge_type TEXT NOT NULL,
+  unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, badge_type)
+);
+
+-- 4. Índices para mejorar rendimiento
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_routes_user_id ON user_routes(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_routes_share_code ON user_routes(share_code);
+CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
+
+-- 5. Row Level Security (RLS) - Seguridad a nivel de fila
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para user_preferences
+CREATE POLICY "Los usuarios pueden ver sus propias preferencias"
+  ON user_preferences FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden crear sus propias preferencias"
+  ON user_preferences FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden actualizar sus propias preferencias"
+  ON user_preferences FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Políticas para user_routes
+CREATE POLICY "Todos pueden ver rutas (para compartir)"
+  ON user_routes FOR SELECT
+  USING (true);
+
+CREATE POLICY "Los usuarios pueden crear sus propias rutas"
+  ON user_routes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden actualizar sus propias rutas"
+  ON user_routes FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden eliminar sus propias rutas"
+  ON user_routes FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Políticas para user_badges
+CREATE POLICY "Los usuarios pueden ver todas las insignias"
+  ON user_badges FOR SELECT
+  USING (true);
+
+CREATE POLICY "Los usuarios pueden crear sus propias insignias"
+  ON user_badges FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- 6. Storage bucket para tickets
+-- Ejecuta esto en el SQL Editor o crea el bucket manualmente en Storage
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('tickets', 'tickets', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Políticas de storage para tickets
+CREATE POLICY "Todos pueden ver tickets públicos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'tickets');
+
+CREATE POLICY "Los usuarios autenticados pueden subir tickets"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'tickets' 
+    AND auth.role() = 'authenticated'
+  );
+
+CREATE POLICY "Los usuarios pueden actualizar sus propios tickets"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Los usuarios pueden eliminar sus propios tickets"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+---
+
+## Step-by-Step Migration
+
+If you prefer to run migrations incrementally:
+
+### Step 1: Create Tables
+
+```sql
+-- User Preferences
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  experiencia TEXT[] NOT NULL,
+  duracion TEXT NOT NULL,
+  dificultad TEXT NOT NULL,
+  grupo TEXT NOT NULL,
+  intereses TEXT[] NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User Routes
+CREATE TABLE IF NOT EXISTS user_routes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  route_name TEXT NOT NULL,
+  atractivos TEXT[] NOT NULL,
+  ticket_url TEXT NOT NULL,
+  share_code TEXT UNIQUE NOT NULL,
+  badges TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User Badges
+CREATE TABLE IF NOT EXISTS user_badges (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  badge_type TEXT NOT NULL,
+  unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, badge_type)
+);
+
+-- User Favorites
+CREATE TABLE IF NOT EXISTS user_favorites (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  atractivo_slug TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, atractivo_slug)
+);
+```
+
+### Step 2: Create Indexes
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_routes_user_id ON user_routes(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_routes_share_code ON user_routes(share_code);
+CREATE INDEX IF NOT EXISTS idx_user_badges_user_id ON user_badges(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_favorites_user_id ON user_favorites(user_id);
+```
+
+### Step 3: Enable Row Level Security
+
+```sql
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
+```
+
+### Step 4: Create RLS Policies for user_preferences
+
+```sql
+CREATE POLICY "Los usuarios pueden ver sus propias preferencias"
+  ON user_preferences FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden crear sus propias preferencias"
+  ON user_preferences FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden actualizar sus propias preferencias"
+  ON user_preferences FOR UPDATE
+  USING (auth.uid() = user_id);
+```
+
+### Step 5: Create RLS Policies for user_routes
+
+```sql
+CREATE POLICY "Todos pueden ver rutas (para compartir)"
+  ON user_routes FOR SELECT
+  USING (true);
+
+CREATE POLICY "Los usuarios pueden crear sus propias rutas"
+  ON user_routes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden actualizar sus propias rutas"
+  ON user_routes FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden eliminar sus propias rutas"
+  ON user_routes FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+### Step 6: Create RLS Policies for user_badges
+
+```sql
+CREATE POLICY "Los usuarios pueden ver todas las insignias"
+  ON user_badges FOR SELECT
+  USING (true);
+
+CREATE POLICY "Los usuarios pueden crear sus propias insignias"
+  ON user_badges FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+```
+
+### Step 7: Create RLS Policies for user_favorites
+
+```sql
+CREATE POLICY "Los usuarios pueden ver sus propios favoritos"
+  ON user_favorites FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden agregar favoritos"
+  ON user_favorites FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Los usuarios pueden eliminar sus favoritos"
+  ON user_favorites FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+### Step 8: Create Storage Bucket
+
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('tickets', 'tickets', true)
+ON CONFLICT (id) DO NOTHING;
+```
+
+### Step 9: Create Storage Policies
+
+```sql
+CREATE POLICY "Todos pueden ver tickets públicos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'tickets');
+
+CREATE POLICY "Los usuarios autenticados pueden subir tickets"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'tickets' 
+    AND auth.role() = 'authenticated'
+  );
+
+CREATE POLICY "Los usuarios pueden actualizar sus propios tickets"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Los usuarios pueden eliminar sus propios tickets"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+---
+
+## Utility Functions
+
+### get_user_stats()
+
+Function to retrieve aggregated user statistics.
+
+```sql
+CREATE OR REPLACE FUNCTION get_user_stats(user_uuid UUID)
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+BEGIN
+  SELECT json_build_object(
+    'total_routes', (SELECT COUNT(*) FROM user_routes WHERE user_id = user_uuid),
+    'total_badges', (SELECT COUNT(*) FROM user_badges WHERE user_id = user_uuid),
+    'latest_route', (SELECT route_name FROM user_routes WHERE user_id = user_uuid ORDER BY created_at DESC LIMIT 1),
+    'created_at', (SELECT created_at FROM user_routes WHERE user_id = user_uuid ORDER BY created_at ASC LIMIT 1)
+  ) INTO result;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Usage:**
+```sql
+SELECT get_user_stats('your-user-uuid-here');
+```
+
+---
+
+## Verification
+
+After running migrations, verify everything is set up correctly:
+
+### Check Tables
+
+```sql
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('user_preferences', 'user_routes', 'user_badges', 'user_favorites');
+```
+
+### Check RLS Policies
+
+```sql
+SELECT schemaname, tablename, policyname 
+FROM pg_policies 
+WHERE tablename IN ('user_preferences', 'user_routes', 'user_badges', 'user_favorites');
+```
+
+### Check Storage Bucket
+
+```sql
+SELECT * FROM storage.buckets WHERE id = 'tickets';
+```
+
+---
+
+## Authentication Setup
+
+<Warning>
+  OAuth providers must be configured manually in the Supabase Dashboard.
+</Warning>
+
+### Configure Google OAuth
+
+1. Go to **Authentication > Providers** in Supabase Dashboard
+2. Enable **Google** provider
+3. Enter your Google OAuth credentials:
+   - **Client ID**: From Google Cloud Console
+   - **Client Secret**: From Google Cloud Console
+   - **Redirect URL**: `https://[your-project].supabase.co/auth/v1/callback`
+
+See the [OAuth Setup Guide](/deployment/oauth) for detailed instructions.
+
+---
+
+## Test Data (Optional)
+
+<Accordion title="Insert test data for development">
+
+```sql
+-- Insert test preferences (replace 'your-user-id' with actual UUID)
+INSERT INTO user_preferences (user_id, experiencia, duracion, dificultad, grupo, intereses)
+VALUES (
+  'your-user-id-here',
+  ARRAY['aventura', 'naturaleza'],
+  'dia-completo',
+  'moderado',
+  'familia',
+  ARRAY['cascadas', 'miradores']
+);
+
+-- Insert test route
+INSERT INTO user_routes (user_id, route_name, atractivos, ticket_url, share_code)
+VALUES (
+  'your-user-id-here',
+  'Mi Primera Ruta',
+  ARRAY['la-pergola', 'cascada-de-atlahuitzia'],
+  'https://zongolica.gob.mx/ruta/test123',
+  'test123'
+);
+
+-- Insert test badge
+INSERT INTO user_badges (user_id, badge_type)
+VALUES (
+  'your-user-id-here',
+  'explorador'
+);
+```
+
+</Accordion>
+
+---
+
+## Rollback
+
+If you need to remove all tables:
+
+```sql
+-- WARNING: This will delete all data!
+DROP TABLE IF EXISTS user_preferences CASCADE;
+DROP TABLE IF EXISTS user_routes CASCADE;
+DROP TABLE IF EXISTS user_badges CASCADE;
+DROP TABLE IF EXISTS user_favorites CASCADE;
+
+-- Remove storage bucket
+DELETE FROM storage.buckets WHERE id = 'tickets';
+```
+
+---
+
+## Related Documentation
+
+- [Database Schema](/api/database/schema) - Complete table documentation
+- [Supabase Client Functions](/api/database/supabase-client) - TypeScript client functions
+- [Supabase Setup Guide](/deployment/supabase-setup) - Complete deployment guide
+- [OAuth Configuration](/deployment/oauth) - Setting up authentication providers

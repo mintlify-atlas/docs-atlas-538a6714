@@ -1,0 +1,393 @@
+---
+title: 'Chat API'
+description: 'Send messages to Nachito, the AI tourism assistant for Zongolica'
+icon: 'messages'
+---
+
+## Overview
+
+The Chat API provides access to Nachito, the AI-powered tourism assistant for Zongolica. Nachito can answer questions about tourist attractions, routes, accommodations, restaurants, events, and directions.
+
+## Send Message
+
+### Endpoint
+
+```
+POST /api/chat
+```
+
+### Authentication
+
+No authentication required (public endpoint).
+
+### Rate Limiting
+
+- **Limit:** 20 requests per minute per IP address
+- **Window:** 60 seconds
+- **Response on limit exceeded:** HTTP 429
+
+### Request Body
+
+<ParamField body="message" type="string" required>
+  User's message (max 500 characters, automatically truncated)
+</ParamField>
+
+<ParamField body="history" type="array">
+  Conversation history (optional, last 8 messages used)
+  
+  Array of objects with `role` ("user" | "assistant") and `content` (string)
+</ParamField>
+
+<ParamField body="location" type="object">
+  User's location for proximity-based recommendations (optional)
+  
+  <Expandable title="Location Object">
+    <ParamField body="location.lat" type="number">
+      Latitude coordinate
+    </ParamField>
+    
+    <ParamField body="location.lng" type="number">
+      Longitude coordinate
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Response
+
+<ResponseField name="reply" type="string">
+  Nachito's response in markdown format
+</ResponseField>
+
+### Example Request (Basic)
+
+```bash
+curl -X POST https://zongolica.gob.mx/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "¿Qué cascadas hay en Zongolica?"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "reply": "¡Tenemos cascadas espectaculares! 🏞️ Las principales son:\n\n- **[Cascada Atlahuitzía](/turismo/atractivos/cascada-atlahuitzia)** — 120 metros de altura, es la más impresionante y visitada.\n- **Cascada del Nacimiento del Río Tonto** — Ideal para combinar con espeleismo y kayak.\n\nTe recomiendo el **Tour Cascada Atlahuitzía** ($750 MXN) que incluye transporte, guías y todos los accesos. ¿Te gustaría saber más sobre alguna ruta?"
+}
+```
+
+### Example Request (With History)
+
+```typescript
+const response = await fetch('/api/chat', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    message: '¿Cuánto cuesta el tour?',
+    history: [
+      {
+        role: 'user',
+        content: '¿Qué cascadas hay?'
+      },
+      {
+        role: 'assistant',
+        content: 'Tenemos la Cascada Atlahuitzía de 120 metros...'
+      }
+    ]
+  })
+});
+
+const data = await response.json();
+console.log(data.reply);
+```
+
+### Example Request (With Location)
+
+```typescript
+// Get user location
+navigator.geolocation.getCurrentPosition(async (position) => {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: '¿Dónde puedo comer cerca?',
+      location: {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      }
+    })
+  });
+
+  const data = await response.json();
+  console.log(data.reply);
+});
+```
+
+## AI Model
+
+Nachito uses **GPT-4o-mini** from OpenAI with the following configuration:
+
+- **Temperature:** 0.7 (balanced creativity and consistency)
+- **Max tokens:** 800 (concise responses)
+- **Context:** Dynamic system prompt with all tourism data
+
+## Features
+
+### 1. Tourism Information
+
+Nachito has comprehensive knowledge about:
+
+- **17 tourist attractions** with details, coordinates, costs, and schedules
+- **Tourist routes** with duration, difficulty, and included attractions
+- **Tourism packages** with prices and availability
+- **Events** including the famous Xochitlallis festival
+- **Service providers** (hotels, restaurants, guides) with contact information
+- **Directions** from major cities (Mexico City, Veracruz, Puebla, Orizaba)
+
+### 2. Location-Aware Responses
+
+When user location is provided, Nachito:
+
+- Calculates distances to all attractions and service providers
+- Orders recommendations by proximity
+- Includes distance information (e.g., "2.5km")
+- Provides Google Maps links for navigation
+
+### 3. Markdown Formatting
+
+Responses include:
+
+- **Bold text** for important information (prices, names)
+- Links to attraction pages: `[Cascada Atlahuitzía](/turismo/atractivos/cascada-atlahuitzia)`
+- External links: `[Ver en mapa](https://google.com/maps/...)`
+- Lists with bullet points
+- Maximum 2-3 emojis per response
+
+### 4. Conversation History
+
+Nachito maintains context across messages:
+
+- Last 8 messages are included for context
+- Truncated to 500 characters per message
+- Enables follow-up questions and clarifications
+
+## Error Responses
+
+### 400 Bad Request
+
+```json
+{
+  "reply": "No recibí un mensaje válido."
+}
+```
+
+Returned when the message is missing or not a string.
+
+### 429 Too Many Requests
+
+```json
+{
+  "reply": "Has enviado muchos mensajes. Espera un momento antes de volver a preguntar 😊"
+}
+```
+
+Returned when rate limit is exceeded (20 requests per minute).
+
+### 502 Bad Gateway
+
+```json
+{
+  "reply": "Hmm, estoy teniendo problemas para responder. Intenta de nuevo en un momento 🙏"
+}
+```
+
+Returned when OpenAI API returns an error.
+
+### 503 Service Unavailable
+
+```json
+{
+  "reply": "El servicio de chat no está disponible en este momento. Disculpa las molestias."
+}
+```
+
+Returned when `OPENAI_API_KEY` is not configured.
+
+### 500 Internal Server Error
+
+```json
+{
+  "reply": "Ocurrió un error de conexión. Por favor intenta más tarde."
+}
+```
+
+Returned for unexpected errors.
+
+## Implementation Example
+
+### React Component
+
+```typescript
+import { useState } from 'react';
+
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+export function ChatWidget() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    setLoading(true);
+
+    // Add user message
+    const newMessages = [...messages, { role: 'user' as const, content: userMessage }];
+    setMessages(newMessages);
+
+    try {
+      // Get user location (optional)
+      let location = undefined;
+      if (navigator.geolocation) {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        }).catch(() => null);
+        
+        if (position) {
+          location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+        }
+      }
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          history: newMessages.slice(-6), // Last 6 messages for context
+          location
+        })
+      });
+
+      const data = await response.json();
+      
+      // Add assistant message
+      setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages([...newMessages, {
+        role: 'assistant',
+        content: 'Error de conexión. Por favor intenta de nuevo.'
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="chat-widget">
+      <div className="messages">
+        {messages.map((msg, i) => (
+          <div key={i} className={msg.role}>
+            {msg.content}
+          </div>
+        ))}
+      </div>
+      
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+        placeholder="Pregunta a Nachito..."
+        disabled={loading}
+      />
+      
+      <button onClick={sendMessage} disabled={loading}>
+        {loading ? 'Enviando...' : 'Enviar'}
+      </button>
+    </div>
+  );
+}
+```
+
+## Best Practices
+
+### 1. Include Conversation History
+
+Always send the last 6-8 messages to maintain context:
+
+```typescript
+history: messages.slice(-6)
+```
+
+### 2. Handle Rate Limits
+
+Implement client-side rate limiting to prevent 429 errors:
+
+```typescript
+const lastRequest = Date.now();
+if (Date.now() - lastRequest < 3000) {
+  alert('Por favor espera unos segundos');
+  return;
+}
+```
+
+### 3. Request User Location
+
+For better recommendations, request location permission:
+
+```typescript
+navigator.geolocation.getCurrentPosition(
+  (position) => {
+    // Include in chat request
+  },
+  (error) => {
+    // Continue without location
+  }
+);
+```
+
+### 4. Render Markdown
+
+Use a markdown renderer for formatted responses:
+
+```typescript
+import ReactMarkdown from 'react-markdown';
+
+<ReactMarkdown>{message.content}</ReactMarkdown>
+```
+
+### 5. Show Loading State
+
+Display a loading indicator while waiting for response:
+
+```typescript
+{loading && <div className="typing-indicator">Nachito está escribiendo...</div>}
+```
+
+## System Prompt
+
+Nachito's personality and knowledge come from a dynamically generated system prompt that includes:
+
+- Personality traits (friendly, concise, enthusiastic)
+- All tourism data from the portal
+- Detailed directions from major cities
+- Weather and packing recommendations
+- Gastronomic information
+- Cultural context (Náhuatl traditions)
+- Emergency contacts
+- Formatting rules (markdown, links, emojis)
+
+The prompt is automatically updated when tourism data changes, ensuring Nachito always has the latest information.

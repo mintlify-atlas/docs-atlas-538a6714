@@ -1,0 +1,246 @@
+---
+title: Environment Variables
+description: Configure environment variables for your Ayuntamiento de Zongolica application
+---
+
+## Overview
+
+Environment variables are critical for configuring your application's connection to external services like Supabase, email providers, and AI services. This guide covers all required and optional environment variables.
+
+## Required Variables
+
+### Supabase Configuration
+
+These variables are **required** for the application to function:
+
+```bash
+PUBLIC_SUPABASE_URL=https://[your-project].supabase.co
+PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+<Note>
+The `PUBLIC_` prefix makes these variables available in client-side code. This is safe for the anon key as it's designed to be exposed publicly.
+</Note>
+
+#### Getting Your Supabase Credentials
+
+<Steps>
+  <Step title="Access Supabase Dashboard">
+    Go to [app.supabase.com](https://app.supabase.com) and select your project
+  </Step>
+  
+  <Step title="Navigate to API Settings">
+    Click on **Settings** → **API** in the left sidebar
+  </Step>
+  
+  <Step title="Copy Project URL">
+    Copy the **Project URL** and set it as `PUBLIC_SUPABASE_URL`
+  </Step>
+  
+  <Step title="Copy Anon Key">
+    Copy the **anon/public** key (not the service_role key) and set it as `PUBLIC_SUPABASE_ANON_KEY`
+  </Step>
+</Steps>
+
+## Optional Variables
+
+### Email Configuration (Resend)
+
+For sending transactional emails:
+
+```bash
+RESEND_API_KEY=re_123456789
+RESEND_FROM=noreply@yourdomain.com
+```
+
+<Note>
+These are only required if you're using email notifications or contact forms. Get your API key from [resend.com](https://resend.com).
+</Note>
+
+### WordPress Integration
+
+If you're integrating with an existing WordPress site:
+
+```bash
+WP_BASE_URL=https://your-wordpress-site.com
+```
+
+### Backend Security
+
+For securing backend API endpoints:
+
+```bash
+BACKEND_APP_SECRET=your-secure-random-string
+```
+
+<Warning>
+Generate a strong random string for production. Use a password generator or run:
+```bash
+openssl rand -base64 32
+```
+</Warning>
+
+### AI Integration (OpenAI)
+
+For AI-powered features:
+
+```bash
+OPENAI_API_KEY=sk-...
+```
+
+### Notion Integration (MCP)
+
+For Notion API integration:
+
+```bash
+NOTION_API_MCP=secret_...
+```
+
+## Setting Up Your .env File
+
+<Steps>
+  <Step title="Copy the Example File">
+    Copy the `.env.example` file to create your local environment file:
+    ```bash
+    cp .env.example .env
+    ```
+  </Step>
+  
+  <Step title="Add Your Credentials">
+    Open `.env` in your text editor and add your actual credentials:
+    ```bash
+    # .env
+    PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+    PUBLIC_SUPABASE_ANON_KEY=your-actual-anon-key
+    
+    # Add other variables as needed
+    RESEND_API_KEY=re_your-key
+    RESEND_FROM=noreply@zongolica.gob.mx
+    ```
+  </Step>
+  
+  <Step title="Verify the File">
+    Ensure the `.env` file is in your project root directory (same level as `package.json`)
+  </Step>
+  
+  <Step title="Restart Development Server">
+    If your dev server is running, restart it to load the new variables:
+    ```bash
+    npm run dev
+    ```
+  </Step>
+</Steps>
+
+## Production Environment Variables
+
+For production deployments (Vercel, Netlify, etc.), add environment variables through your hosting platform's dashboard:
+
+### Vercel
+
+<Steps>
+  <Step title="Go to Project Settings">
+    Navigate to your project on [vercel.com](https://vercel.com)
+  </Step>
+  
+  <Step title="Open Environment Variables">
+    Click **Settings** → **Environment Variables**
+  </Step>
+  
+  <Step title="Add Variables">
+    Add each variable with its value. Select the appropriate environments (Production, Preview, Development)
+  </Step>
+  
+  <Step title="Redeploy">
+    Trigger a new deployment for the changes to take effect
+  </Step>
+</Steps>
+
+## Security Best Practices
+
+<Warning>
+Never commit your `.env` file to version control. It's already included in `.gitignore`.
+</Warning>
+
+### Do's and Don'ts
+
+✅ **Do:**
+- Use different credentials for development and production
+- Rotate keys regularly
+- Use strong, random values for secrets
+- Store production credentials in your hosting platform's environment variable system
+- Keep a secure backup of your production credentials
+
+❌ **Don't:**
+- Commit `.env` files to Git
+- Share credentials in chat or email
+- Use production credentials in development
+- Hardcode credentials in your source code
+- Use weak or predictable secrets
+
+### Using PUBLIC_ Variables
+
+In Astro, variables prefixed with `PUBLIC_` are exposed to the client:
+
+```typescript
+// ✅ Safe - using PUBLIC_ variable
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+
+// ❌ Dangerous - don't expose secrets to client
+const apiKey = import.meta.env.SECRET_API_KEY; // This won't work anyway
+```
+
+<Note>
+Only Supabase's anon key should be public. Never expose service_role keys, API secrets, or other sensitive credentials with the `PUBLIC_` prefix.
+</Note>
+
+## Troubleshooting
+
+### Variables Not Loading
+
+If your environment variables aren't being recognized:
+
+1. **Check the file name**: Must be exactly `.env` (not `.env.local` or `.env.development`)
+2. **Check the location**: Must be in the project root
+3. **Restart the dev server**: Environment variables are loaded at startup
+4. **Check for typos**: Variable names are case-sensitive
+5. **Remove quotes**: Don't wrap values in quotes unless they contain spaces
+
+### Verifying Variables Are Loaded
+
+Create a test endpoint to verify (remove in production):
+
+```typescript
+// src/pages/api/test-env.ts
+export async function GET() {
+  return new Response(JSON.stringify({
+    hasSupabaseUrl: !!import.meta.env.PUBLIC_SUPABASE_URL,
+    hasSupabaseKey: !!import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  }));
+}
+```
+
+## Reference
+
+Complete `.env.example` file:
+
+```bash
+# Supabase Configuration (Required)
+PUBLIC_SUPABASE_URL=
+PUBLIC_SUPABASE_ANON_KEY=
+
+# Email Service (Optional)
+RESEND_API_KEY=
+RESEND_FROM=
+
+# WordPress Integration (Optional)
+WP_BASE_URL=
+
+# Backend Security (Optional)
+BACKEND_APP_SECRET=
+
+# AI Integration (Optional)
+OPENAI_API_KEY=
+
+# Notion Integration (Optional)
+NOTION_API_MCP=
+```

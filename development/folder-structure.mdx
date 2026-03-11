@@ -1,0 +1,478 @@
+---
+title: Folder Structure
+description: Project directory organization and file conventions
+icon: 'folder-tree'
+---
+
+## Root Directory
+
+```
+h-ayuntamiento-zongo/
+├── src/                    # Source code
+├── public/                 # Static assets
+├── astro.config.mjs        # Astro configuration
+├── tsconfig.json           # TypeScript configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+├── package.json            # Dependencies and scripts
+└── vercel.json             # Vercel deployment config
+```
+
+## `/src` Directory
+
+The main source code directory contains all application logic, components, and content.
+
+### Overview
+
+```
+src/
+├── pages/                  # Astro pages → routes
+├── components/             # React & Astro components
+├── layouts/                # Page layout templates
+├── lib/                    # Utilities and clients
+├── data/                   # Static content (JSON, MD)
+├── i18n/                   # Translation files
+├── styles/                 # Global CSS
+├── assets/                 # Optimized images
+├── types/                  # TypeScript type definitions
+└── consts/                 # Global constants
+```
+
+## `/src/pages`
+
+**File-based routing** - Each file becomes a route.
+
+```
+pages/
+├── index.astro             # → /
+├── comunicacion.astro      # → /comunicacion
+├── directorio.astro        # → /directorio
+├── turismo.astro           # → /turismo
+├── contacto.astro          # → /contacto
+├── transparencia.astro     # → /transparencia
+│
+├── turismo/                # Nested routes
+│   ├── index.astro         # → /turismo
+│   ├── onboarding.astro    # → /turismo/onboarding
+│   ├── perfil.astro        # → /turismo/perfil
+│   └── atractivos/
+│       ├── index.astro     # → /turismo/atractivos
+│       └── [slug].astro    # → /turismo/atractivos/:slug
+│
+├── ruta/
+│   └── [shareCode].astro   # → /ruta/:shareCode
+│
+├── auth/
+│   └── callback.astro      # → /auth/callback (OAuth)
+│
+└── api/                    # API endpoints
+    └── og-image.ts         # → /api/og-image (OpenGraph)
+```
+
+### Dynamic Routes
+
+**Bracket notation** for dynamic segments:
+
+```astro
+---
+// pages/turismo/atractivos/[slug].astro
+export async function getStaticPaths() {
+  return atractivos.map(item => ({
+    params: { slug: item.slug }
+  }));
+}
+
+const { slug } = Astro.params;
+---
+```
+
+### i18n Routes
+
+Configured in `astro.config.mjs` for multilingual support:
+
+- `/` → Spanish (default)
+- `/en/` → English
+- `/nah-MX/` → Nahuatl
+
+See [Internationalization](/development/i18n) for details.
+
+## `/src/components`
+
+**Organized by feature and type**.
+
+```
+components/
+├── Header.tsx              # Main navigation (React)
+├── Footer.astro            # Site footer
+├── AuthButtons.tsx         # Authentication UI (React)
+├── ShareButtons.tsx        # Social sharing (React)
+├── AtractivoCard.astro     # Attraction display
+├── LanguageSwitcher.astro  # i18n selector
+│
+├── turismo/                # Tourism feature components
+│   ├── TurismoOnboarding.tsx       # Onboarding wizard (React)
+│   ├── TurismoHeader.astro         # Tourism page header
+│   ├── TurismoTicket.astro         # Route ticket display
+│   ├── FavoriteButton.tsx          # Save attractions (React)
+│   ├── PreferencesEditor.tsx       # Edit preferences (React)
+│   ├── PersonalizedTravelSpotlight.tsx
+│   ├── MiRutaView.tsx              # Route viewer (React)
+│   ├── HeroSlider.astro            # Image carousel
+│   ├── RouteCard.astro             # Route preview card
+│   ├── PlaceCard.astro             # Place preview
+│   ├── EventList.astro             # Event listings
+│   ├── VisitorServices.astro       # Visitor info
+│   ├── EmergencyNumbers.astro      # Safety information
+│   ├── SecurityTips.astro          # Travel tips
+│   ├── AccessibilityInfo.astro     # Accessibility details
+│   ├── Breadcrumbs.astro           # Navigation breadcrumbs
+│   ├── SectionIntro.astro          # Section headers
+│   └── RoutesSection.astro         # Routes overview
+│
+├── ui/                     # Reusable UI components
+│   ├── resizable-navbar.tsx        # Responsive navbar (React)
+│   ├── Gallery.astro               # Image gallery
+│   ├── GalleryGobierno.astro       # Government gallery
+│   └── SileoToaster.tsx            # Toast notifications
+│
+├── xochitlanis/            # Event-specific components
+│   ├── Hero.astro
+│   ├── CountDown.astro
+│   ├── FAQ.astro
+│   ├── EventCard.astro
+│   ├── ExperienceCard.astro
+│   ├── RouteCard.astro
+│   ├── ServiceCard.astro
+│   ├── PaseApp.astro
+│   ├── GafetePase.astro
+│   ├── FooterXochitlanis.astro
+│   └── ui/
+│       ├── Accordion.astro
+│       └── Topic.astro
+│
+├── flags/                  # Language flag icons
+│   ├── Spain.astro
+│   ├── UnitedStates.astro
+│   ├── Nahuatl.astro
+│   └── Mexico.astro
+│
+└── icons/                  # Custom icons
+    └── Chevron.astro
+```
+
+### Component Conventions
+
+**File Extensions**:
+- `.astro` - Astro components (HTML + JS, server-rendered)
+- `.tsx` - React components (client-side interactive)
+- `.ts` - TypeScript utilities
+
+**Naming**:
+- PascalCase for all components
+- Descriptive names (e.g., `TurismoOnboarding.tsx` not `Onboarding.tsx`)
+
+**Client Directives** (React components):
+
+```astro
+<AuthButtons client:load />          <!-- Hydrate immediately -->
+<TurismoOnboarding client:visible /> <!-- Hydrate when visible -->
+<MiRutaView client:idle />           <!-- Hydrate when idle -->
+```
+
+See [Component Overview](/development/components/overview) for architecture details.
+
+## `/src/lib`
+
+**Utility functions and client libraries**.
+
+```
+lib/
+├── supabase.ts             # Supabase client + helpers
+├── badges.ts               # Badge/achievement logic
+├── recommendations.ts      # Route recommendation engine
+├── generateTicket.ts       # Ticket generation
+└── utils.ts                # General utilities
+```
+
+### `supabase.ts` Structure
+
+```typescript
+// Client initialization
+export const supabase = createClient(url, key);
+
+// TypeScript types
+export interface UserProfile { ... }
+export interface UserPreferences { ... }
+export interface UserRoute { ... }
+
+// Helper functions
+export async function getCurrentUser() { ... }
+export async function saveUserPreferences() { ... }
+export async function getUserRoutes() { ... }
+// ... 20+ more helpers
+```
+
+See [Supabase Integration](/development/supabase) for complete API.
+
+## `/src/data`
+
+**Static content and datasets**.
+
+```
+data/
+├── turismo/
+│   ├── atractivos.ts       # Tourist attractions data
+│   ├── rutas.ts            # Predefined routes
+│   ├── eventos.ts          # Events calendar
+│   └── prestadores.ts      # Service providers
+│
+├── gobierno/
+│   ├── directorio.ts       # Government directory
+│   ├── ejes.ts             # Government pillars
+│   └── transparencia.ts    # Transparency data
+│
+└── comunicacion/
+    ├── noticias.ts         # News articles
+    └── boletines.ts        # Press releases
+```
+
+### Data File Example
+
+```typescript
+// data/turismo/atractivos.ts
+export interface Atractivo {
+  slug: string;
+  titulo: string;
+  categoria: string;
+  imagen: string;
+  ubicacion: { lat: number; lng: number };
+  // ...
+}
+
+export const atractivos: Atractivo[] = [
+  {
+    slug: "cascada-texpico",
+    titulo: "Cascada de Texpico",
+    categoria: "Naturaleza",
+    imagen: "/turismo/cascada-texpico.webp",
+    // ...
+  },
+  // ...
+];
+```
+
+## `/src/i18n`
+
+**Translation files for multilingual support**.
+
+```
+i18n/
+└── xochitlanis/
+    ├── es.json             # Spanish (default)
+    ├── en.json             # English
+    └── nah-MX.json         # Nahuatl
+```
+
+### Translation File Structure
+
+```json
+// i18n/xochitlanis/es.json
+{
+  "SEO_TITLE": "Revive el Xochitlallis 2026",
+  "HERO_TITLE": "Gracias por ser parte del",
+  "HERO_LEAD": "El 5 y 6 de marzo Zongolica vibró con...",
+  "CTA_PRIMARY": "VER GALERÍA",
+  "GALLERY_TITLE": "Los mejores momentos del Xochitlallis 2026"
+}
+```
+
+**Usage in Components**:
+
+```astro
+---
+import es from '@/i18n/xochitlanis/es.json';
+const t = es; // Or use locale detection
+---
+
+<h1>{t.HERO_TITLE}</h1>
+```
+
+See [Internationalization](/development/i18n) for full guide.
+
+## `/src/layouts`
+
+**Page templates** for consistent structure.
+
+```
+layouts/
+├── BaseLayout.astro        # Base HTML template
+├── TurismoLayout.astro     # Tourism pages layout
+└── GobiernoLayout.astro    # Government pages layout
+```
+
+### Layout Example
+
+```astro
+---
+// layouts/BaseLayout.astro
+import Header from '@/components/Header.tsx';
+import Footer from '@/components/Footer.astro';
+
+const { title, description } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>{title}</title>
+  <meta name="description" content={description} />
+</head>
+<body>
+  <Header client:load />
+  <main>
+    <slot /> <!-- Page content goes here -->
+  </main>
+  <Footer />
+</body>
+</html>
+```
+
+## `/src/types`
+
+**TypeScript type definitions**.
+
+```
+types/
+├── turismo.ts              # Tourism types
+├── gobierno.ts             # Government types
+└── global.d.ts             # Global declarations
+```
+
+## `/src/styles`
+
+**Global CSS and design tokens**.
+
+```
+styles/
+├── global.css              # Global styles + Tailwind imports
+└── animations.css          # Custom animations
+```
+
+### global.css
+
+```css
+@import 'tailwindcss';
+
+@layer base {
+  body {
+    @apply font-poppins antialiased;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+```
+
+## `/public`
+
+**Static assets** served as-is (no bundling).
+
+```
+public/
+├── hero/                   # Hero images
+│   └── zongolica-aerea.webp
+├── turismo/                # Tourism images
+│   ├── gallery/
+│   │   ├── img-1.webp
+│   │   ├── img-2.webp
+│   │   └── ...
+│   └── atractivos/
+├── fonts/                  # Custom fonts (if needed)
+├── favicon.ico
+└── robots.txt
+```
+
+**Usage in Components**:
+
+```astro
+<img src="/hero/zongolica-aerea.webp" alt="Zongolica" />
+```
+
+<Warning>
+Files in `/public` are served at the root path. Don't prefix with `/public/` in URLs.
+</Warning>
+
+## Configuration Files
+
+### `astro.config.mjs`
+
+```javascript
+import { defineConfig } from 'astro/config';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@astrojs/react';
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  output: 'server',           // SSR mode
+  adapter: vercel(),          // Vercel deployment
+  vite: {
+    plugins: [tailwindcss()]  // Tailwind CSS
+  },
+  i18n: {
+    locales: ["es", "en", "nah-MX"],
+    defaultLocale: "es",
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
+  integrations: [react()]     // React support
+});
+```
+
+### `tsconfig.json`
+
+```json
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]       // Path alias: @/lib/supabase
+    }
+  }
+}
+```
+
+## Import Aliases
+
+**Use `@/` prefix** for clean imports:
+
+```typescript
+// ✅ Good
+import { supabase } from '@/lib/supabase';
+import AuthButtons from '@/components/AuthButtons.tsx';
+import type { Atractivo } from '@/data/turismo/atractivos';
+
+// ❌ Avoid
+import { supabase } from '../../../lib/supabase';
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    All technologies and libraries
+  </Card>
+  <Card title="Supabase Integration" icon="database" href="/development/supabase">
+    Database and helper functions
+  </Card>
+  <Card title="Components Overview" icon="puzzle-piece" href="/development/components/overview">
+    Component architecture patterns
+  </Card>
+  <Card title="i18n Guide" icon="language" href="/development/i18n">
+    Internationalization implementation
+  </Card>
+</CardGroup>

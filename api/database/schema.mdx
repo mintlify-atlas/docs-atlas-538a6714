@@ -1,0 +1,332 @@
+---
+title: 'Database Schema'
+description: 'Complete PostgreSQL database schema for Supabase'
+icon: 'database'
+---
+
+## Overview
+
+The Zongolica application uses **Supabase** (PostgreSQL) for data storage. The database includes tables for user profiles, preferences, routes, badges, favorites, and visitor registration.
+
+<Note>
+  All tables use UUID as primary keys and include Row Level Security (RLS) policies for data protection.
+</Note>
+
+---
+
+## Authentication Tables
+
+Supabase provides the `auth.users` table automatically. User authentication is handled by Supabase Auth with Google OAuth support.
+
+---
+
+## User Tables
+
+### user_profiles
+
+Stores user profile information synchronized with Supabase Auth.
+
+```sql
+CREATE TABLE user_profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  avatar_url TEXT,
+  provider TEXT NOT NULL,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_profiles_email ON user_profiles(email);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key, references auth.users(id) |
+| `email` | TEXT | User's email address |
+| `full_name` | TEXT | User's full name |
+| `avatar_url` | TEXT | Profile picture URL (from OAuth) |
+| `provider` | TEXT | Auth provider ("google", "email") |
+| `onboarding_completed` | BOOLEAN | Whether user completed onboarding |
+| `created_at` | TIMESTAMPTZ | Profile creation timestamp |
+| `updated_at` | TIMESTAMPTZ | Last update timestamp |
+
+---
+
+### user_preferences
+
+Stores user preferences collected during onboarding for personalized recommendations.
+
+```sql
+CREATE TABLE user_preferences (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  experiencia TEXT[] NOT NULL,
+  duracion TEXT NOT NULL,
+  dificultad TEXT NOT NULL,
+  grupo TEXT NOT NULL,
+  intereses TEXT[] NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key (auto-generated) |
+| `user_id` | UUID | References auth.users(id) |
+| `experiencia` | TEXT[] | Experience types (e.g., ["aventura", "naturaleza"]) |
+| `duracion` | TEXT | Preferred duration ("medio-dia", "dia-completo", "fin-de-semana") |
+| `dificultad` | TEXT | Difficulty level ("facil", "moderado", "dificil") |
+| `grupo` | TEXT | Travel group ("solo", "pareja", "familia", "amigos") |
+| `intereses` | TEXT[] | Specific interests (e.g., ["cascadas", "miradores"]) |
+| `created_at` | TIMESTAMPTZ | Creation timestamp |
+
+**Possible Values:**
+
+- **experiencia**: `aventura`, `naturaleza`, `cultura`, `gastronomia`, `relax`
+- **duracion**: `medio-dia`, `dia-completo`, `fin-de-semana`
+- **dificultad**: `facil`, `moderado`, `dificil`
+- **grupo**: `solo`, `pareja`, `familia`, `amigos`
+- **intereses**: `cascadas`, `miradores`, `cuevas`, `senderismo`, `rappel`, `kayak`, `historia`, `fotografia`
+
+---
+
+### user_routes
+
+Stores user-generated tourism routes with shareable links.
+
+```sql
+CREATE TABLE user_routes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  route_name TEXT NOT NULL,
+  atractivos TEXT[] NOT NULL,
+  ticket_url TEXT NOT NULL,
+  share_code TEXT UNIQUE NOT NULL,
+  badges TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_routes_user_id ON user_routes(user_id);
+CREATE INDEX idx_user_routes_share_code ON user_routes(share_code);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key (auto-generated) |
+| `user_id` | UUID | References auth.users(id) |
+| `route_name` | TEXT | Name given to the route |
+| `atractivos` | TEXT[] | Array of attraction slugs |
+| `ticket_url` | TEXT | URL to generated ticket/itinerary |
+| `share_code` | TEXT | Unique shareable code (e.g., "abc123") |
+| `badges` | TEXT[] | Array of earned badge types |
+| `created_at` | TIMESTAMPTZ | Route creation timestamp |
+
+---
+
+### user_badges
+
+Stores unlocked achievements/badges for gamification.
+
+```sql
+CREATE TABLE user_badges (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  badge_type TEXT NOT NULL,
+  unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, badge_type)
+);
+
+CREATE INDEX idx_user_badges_user_id ON user_badges(user_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key (auto-generated) |
+| `user_id` | UUID | References auth.users(id) |
+| `badge_type` | TEXT | Badge identifier (e.g., "aventurero") |
+| `unlocked_at` | TIMESTAMPTZ | When badge was unlocked |
+
+**Constraint:** `UNIQUE(user_id, badge_type)` - Each user can only unlock each badge once.
+
+---
+
+### user_favorites
+
+Stores user's favorite tourist attractions.
+
+```sql
+CREATE TABLE user_favorites (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  atractivo_slug TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, atractivo_slug)
+);
+
+CREATE INDEX idx_user_favorites_user_id ON user_favorites(user_id);
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key (auto-generated) |
+| `user_id` | UUID | References auth.users(id) |
+| `atractivo_slug` | TEXT | Slug of favorited attraction |
+| `created_at` | TIMESTAMPTZ | When favorite was added |
+
+**Constraint:** `UNIQUE(user_id, atractivo_slug)` - Each attraction can only be favorited once per user.
+
+---
+
+## Visitor Registration (MySQL)
+
+### visitantes
+
+Stores visitor registration data (pre-registration and on-site check-ins).
+
+<Warning>
+  This table uses **MySQL** (not Supabase), typically hosted with shared hosting or phpMyAdmin.
+</Warning>
+
+```sql
+CREATE TABLE visitantes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  token CHAR(64) NOT NULL UNIQUE,
+  nombre VARCHAR(80) NOT NULL,
+  apellidos VARCHAR(120) NULL,
+  email VARCHAR(190) NULL,
+  telefono VARCHAR(24) NULL,
+  lugar VARCHAR(120) NULL,
+  pais VARCHAR(120) NULL,
+  estado VARCHAR(120) NULL,
+  municipio VARCHAR(120) NULL,
+  edad TINYINT NULL,
+  genero ENUM('M','F','X','NA') NOT NULL DEFAULT 'NA',
+  foto_url TEXT NULL,
+  source ENUM('pre','sitio') NOT NULL DEFAULT 'pre',
+  check_in_at DATETIME NULL,
+  check_in_by INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  email_status ENUM('pending','sent','failed') NULL,
+  email_sent_at DATETIME NULL,
+  email_error VARCHAR(255) NULL,
+  INDEX idx_created_at (created_at),
+  INDEX idx_check_in_at (check_in_at),
+  CONSTRAINT fk_checkin_admin FOREIGN KEY (check_in_by) REFERENCES admins(id)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INT | Primary key (auto-increment) |
+| `token` | CHAR(64) | Unique visitor token |
+| `nombre` | VARCHAR(80) | First name |
+| `apellidos` | VARCHAR(120) | Last name |
+| `email` | VARCHAR(190) | Email address |
+| `telefono` | VARCHAR(24) | Phone number |
+| `lugar` | VARCHAR(120) | Origin location |
+| `pais` | VARCHAR(120) | Country |
+| `estado` | VARCHAR(120) | State/province |
+| `municipio` | VARCHAR(120) | Municipality |
+| `edad` | TINYINT | Age |
+| `genero` | ENUM | Gender (M/F/X/NA) |
+| `foto_url` | TEXT | Photo URL |
+| `source` | ENUM | Registration source (pre/sitio) |
+| `check_in_at` | DATETIME | Check-in timestamp |
+| `check_in_by` | INT | Admin who performed check-in |
+| `created_at` | DATETIME | Registration timestamp |
+| `email_status` | ENUM | Email delivery status |
+| `email_sent_at` | DATETIME | When email was sent |
+| `email_error` | VARCHAR(255) | Email error message |
+
+---
+
+## Storage Buckets
+
+### tickets
+
+Supabase Storage bucket for ticket/itinerary images and PDFs.
+
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('tickets', 'tickets', true)
+ON CONFLICT (id) DO NOTHING;
+```
+
+**Configuration:**
+- **Public**: Yes (all tickets are publicly accessible)
+- **Max file size**: 5MB
+- **Allowed types**: `image/*`, `application/pdf`
+
+---
+
+## Database Functions
+
+### get_user_stats()
+
+Utility function to retrieve user statistics.
+
+```sql
+CREATE OR REPLACE FUNCTION get_user_stats(user_uuid UUID)
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+BEGIN
+  SELECT json_build_object(
+    'total_routes', (SELECT COUNT(*) FROM user_routes WHERE user_id = user_uuid),
+    'total_badges', (SELECT COUNT(*) FROM user_badges WHERE user_id = user_uuid),
+    'latest_route', (SELECT route_name FROM user_routes WHERE user_id = user_uuid ORDER BY created_at DESC LIMIT 1),
+    'created_at', (SELECT created_at FROM user_routes WHERE user_id = user_uuid ORDER BY created_at ASC LIMIT 1)
+  ) INTO result;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Usage:**
+```sql
+SELECT get_user_stats('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+```
+
+---
+
+## Verification Queries
+
+### Check Tables
+
+```sql
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public' 
+AND table_name IN ('user_preferences', 'user_routes', 'user_badges', 'user_favorites');
+```
+
+### Check Indexes
+
+```sql
+SELECT tablename, indexname 
+FROM pg_indexes 
+WHERE schemaname = 'public';
+```
+
+### Check RLS Policies
+
+```sql
+SELECT schemaname, tablename, policyname 
+FROM pg_policies 
+WHERE tablename IN ('user_preferences', 'user_routes', 'user_badges', 'user_favorites');
+```
+
+---
+
+## Related Documentation
+
+- [Database Migrations](/api/database/migrations) - Setting up tables and RLS policies
+- [Supabase Client Functions](/api/database/supabase-client) - TypeScript functions for database operations
+- [User Data Types](/api/types/user) - TypeScript interfaces for user data
+- [Supabase Setup Guide](/deployment/supabase-setup) - Complete deployment guide

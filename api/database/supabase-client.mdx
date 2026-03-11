@@ -1,0 +1,737 @@
+---
+title: 'Supabase Client Functions'
+description: 'TypeScript functions for database operations and authentication'
+icon: 'code'
+---
+
+## Overview
+
+The `src/lib/supabase.ts` file exports 30+ functions for interacting with the Supabase database and authentication system. All functions are fully typed with TypeScript.
+
+<Note>
+  These functions use the Supabase JavaScript client and handle errors consistently with `{ data, error }` return values.
+</Note>
+
+---
+
+## Client Initialization
+
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+---
+
+## Authentication Functions
+
+### getCurrentUser()
+
+Get the currently authenticated user.
+
+```typescript
+function getCurrentUser(): Promise<User | null>
+```
+
+**Example:**
+```typescript
+const user = await getCurrentUser();
+if (user) {
+  console.log('Logged in as:', user.email);
+}
+```
+
+---
+
+### signInWithEmail()
+
+Sign in with email and password.
+
+```typescript
+function signInWithEmail(
+  email: string,
+  password: string
+): Promise<{
+  data: AuthResponse | null;
+  error: AuthError | null;
+}>
+```
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await signInWithEmail('user@example.com', 'password123');
+if (error) {
+  console.error('Login failed:', error.message);
+} else {
+  console.log('Logged in:', data.user);
+}
+```
+
+---
+
+### signUpWithEmail()
+
+Create a new account with email and password.
+
+```typescript
+function signUpWithEmail(
+  email: string,
+  password: string,
+  name?: string
+): Promise<{
+  data: AuthResponse | null;
+  error: AuthError | null;
+}>
+```
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password (min 6 characters)
+</ParamField>
+
+<ParamField path="name" type="string">
+  User's display name (defaults to email prefix)
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await signUpWithEmail(
+  'newuser@example.com',
+  'securePassword123',
+  'Juan Pérez'
+);
+```
+
+---
+
+### signInWithGoogle()
+
+Initiate Google OAuth sign-in flow.
+
+```typescript
+function signInWithGoogle(
+  redirectPath?: string
+): Promise<{
+  data: AuthResponse | null;
+  error: AuthError | null;
+}>
+```
+
+<ParamField path="redirectPath" type="string">
+  Path to redirect after authentication. Default: `/turismo?onboarding=1`
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await signInWithGoogle('/perfil');
+if (error) {
+  console.error('Google sign-in failed:', error);
+}
+```
+
+---
+
+### signOut()
+
+Sign out the current user.
+
+```typescript
+function signOut(): Promise<{
+  error: AuthError | null;
+}>
+```
+
+**Example:**
+```typescript
+const { error } = await signOut();
+if (!error) {
+  window.location.href = '/';
+}
+```
+
+---
+
+## User Profile Functions
+
+### getUserProfile()
+
+Get user profile by ID.
+
+```typescript
+function getUserProfile(
+  userId: string
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="userId" type="string" required>
+  UUID of the user
+</ParamField>
+
+**Example:**
+```typescript
+const { data: profile, error } = await getUserProfile(user.id);
+if (profile) {
+  console.log('User:', profile.full_name);
+}
+```
+
+---
+
+### upsertUserProfile()
+
+Create or update user profile.
+
+```typescript
+function upsertUserProfile(
+  profile: Partial<UserProfile> & { id: string }
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="profile" type="Partial<UserProfile> & { id: string }" required>
+  Profile data (must include `id`)
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await upsertUserProfile({
+  id: user.id,
+  full_name: 'Juan Pérez',
+  email: user.email,
+  avatar_url: user.user_metadata.avatar_url,
+  provider: 'google'
+});
+```
+
+---
+
+### markOnboardingCompleted()
+
+Mark user's onboarding as completed.
+
+```typescript
+function markOnboardingCompleted(
+  userId: string
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | null;
+}>
+```
+
+**Example:**
+```typescript
+await markOnboardingCompleted(user.id);
+```
+
+---
+
+### isOnboardingCompleted()
+
+Check if user has completed onboarding.
+
+```typescript
+function isOnboardingCompleted(userId: string): Promise<boolean>
+```
+
+**Example:**
+```typescript
+const completed = await isOnboardingCompleted(user.id);
+if (!completed) {
+  window.location.href = '/turismo?onboarding=1';
+}
+```
+
+---
+
+### getFullProfile()
+
+Get complete user profile with all related data.
+
+```typescript
+function getFullProfile(userId: string): Promise<{
+  profile: UserProfile | null;
+  preferences: UserPreferences | null;
+  badges: UserBadge[];
+  routes: UserRoute[];
+  favorites: UserFavorite[];
+}>
+```
+
+**Returns:** Object containing profile, preferences, badges, routes, and favorites.
+
+**Example:**
+```typescript
+const fullProfile = await getFullProfile(user.id);
+console.log('Badges:', fullProfile.badges.length);
+console.log('Routes:', fullProfile.routes.length);
+console.log('Favorites:', fullProfile.favorites.length);
+```
+
+---
+
+## Preferences Functions
+
+### saveUserPreferences()
+
+Save or update user preferences (upsert).
+
+```typescript
+function saveUserPreferences(
+  preferences: UserPreferences
+): Promise<{
+  data: UserPreferences | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="preferences" type="UserPreferences" required>
+  User preferences object. See [UserPreferences](/api/types/user#userpreferences)
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await saveUserPreferences({
+  user_id: user.id,
+  experiencia: ['aventura', 'naturaleza'],
+  duracion: 'dia-completo',
+  dificultad: 'moderado',
+  grupo: 'familia',
+  intereses: ['cascadas', 'miradores', 'senderismo']
+});
+```
+
+---
+
+### getUserPreferences()
+
+Get user preferences.
+
+```typescript
+function getUserPreferences(
+  userId: string
+): Promise<{
+  data: UserPreferences | null;
+  error: PostgrestError | null;
+}>
+```
+
+**Example:**
+```typescript
+const { data: prefs, error } = await getUserPreferences(user.id);
+if (prefs) {
+  console.log('User prefers:', prefs.experiencia);
+}
+```
+
+---
+
+## Route Functions
+
+### saveUserRoute()
+
+Create a new user route.
+
+```typescript
+function saveUserRoute(
+  route: Omit<UserRoute, 'id' | 'created_at'>
+): Promise<{
+  data: UserRoute | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="route" type="Omit<UserRoute, 'id' | 'created_at'>" required>
+  Route data (id and created_at are auto-generated)
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await saveUserRoute({
+  user_id: user.id,
+  route_name: 'Mi Aventura',
+  atractivos: ['la-pergola', 'cascada-de-atlahuitzia'],
+  ticket_url: 'https://zongolica.gob.mx/ruta/abc123',
+  share_code: 'abc123',
+  badges: ['explorador']
+});
+```
+
+---
+
+### getUserRoute()
+
+Get a route by share code (for sharing).
+
+```typescript
+function getUserRoute(
+  shareCode: string
+): Promise<{
+  data: UserRoute | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="shareCode" type="string" required>
+  Unique share code for the route
+</ParamField>
+
+**Example:**
+```typescript
+const { data: route, error } = await getUserRoute('abc123');
+if (route) {
+  console.log('Route:', route.route_name);
+  console.log('Attractions:', route.atractivos);
+}
+```
+
+---
+
+### getUserRoutes()
+
+Get all routes created by a user.
+
+```typescript
+function getUserRoutes(
+  userId: string
+): Promise<{
+  data: UserRoute[] | null;
+  error: PostgrestError | null;
+}>
+```
+
+**Example:**
+```typescript
+const { data: routes, error } = await getUserRoutes(user.id);
+console.log('User has', routes?.length, 'routes');
+```
+
+---
+
+### getLatestUserRoute()
+
+Get the most recent route created by a user.
+
+```typescript
+function getLatestUserRoute(userId: string): Promise<UserRoute | null>
+```
+
+**Example:**
+```typescript
+const latestRoute = await getLatestUserRoute(user.id);
+if (latestRoute) {
+  console.log('Latest:', latestRoute.route_name);
+}
+```
+
+---
+
+## Badge Functions
+
+### unlockBadge()
+
+Unlock a badge for a user.
+
+```typescript
+function unlockBadge(
+  userId: string,
+  badgeType: string
+): Promise<{
+  data: UserBadge | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="userId" type="string" required>
+  UUID of the user
+</ParamField>
+
+<ParamField path="badgeType" type="string" required>
+  Badge identifier (e.g., "aventurero", "explorador")
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await unlockBadge(user.id, 'aventurero');
+if (!error) {
+  console.log('Badge unlocked!');
+}
+```
+
+---
+
+### getUserBadges()
+
+Get all badges unlocked by a user.
+
+```typescript
+function getUserBadges(
+  userId: string
+): Promise<{
+  data: UserBadge[] | null;
+  error: PostgrestError | null;
+}>
+```
+
+**Example:**
+```typescript
+const { data: badges, error } = await getUserBadges(user.id);
+console.log('User has', badges?.length, 'badges');
+```
+
+---
+
+### hasBadge()
+
+Check if user has a specific badge.
+
+```typescript
+function hasBadge(
+  userId: string,
+  badgeType: string
+): Promise<boolean>
+```
+
+**Example:**
+```typescript
+const hasAventurero = await hasBadge(user.id, 'aventurero');
+if (!hasAventurero) {
+  // Show badge unlock animation
+  await unlockBadge(user.id, 'aventurero');
+}
+```
+
+---
+
+## Favorites Functions
+
+### getUserFavorites()
+
+Get all user favorites.
+
+```typescript
+function getUserFavorites(
+  userId: string
+): Promise<{
+  data: UserFavorite[] | null;
+  error: PostgrestError | null;
+}>
+```
+
+**Example:**
+```typescript
+const { data: favorites, error } = await getUserFavorites(user.id);
+const favoriteSlugs = favorites?.map(f => f.atractivo_slug) || [];
+```
+
+---
+
+### addFavorite()
+
+Add an attraction to favorites.
+
+```typescript
+function addFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<{
+  data: UserFavorite | null;
+  error: PostgrestError | null;
+}>
+```
+
+<ParamField path="userId" type="string" required>
+  UUID of the user
+</ParamField>
+
+<ParamField path="atractivoSlug" type="string" required>
+  Slug of the attraction (e.g., "cascada-de-atlahuitzia")
+</ParamField>
+
+**Example:**
+```typescript
+const { data, error } = await addFavorite(user.id, 'la-pergola');
+if (!error) {
+  console.log('Added to favorites!');
+}
+```
+
+---
+
+### removeFavorite()
+
+Remove an attraction from favorites.
+
+```typescript
+function removeFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<{
+  error: PostgrestError | null;
+}>
+```
+
+**Example:**
+```typescript
+const { error } = await removeFavorite(user.id, 'la-pergola');
+if (!error) {
+  console.log('Removed from favorites');
+}
+```
+
+---
+
+### isFavorite()
+
+Check if an attraction is favorited.
+
+```typescript
+function isFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<boolean>
+```
+
+**Example:**
+```typescript
+const isFav = await isFavorite(user.id, 'cascada-de-atlahuitzia');
+setHeartIcon(isFav ? 'filled' : 'outline');
+```
+
+---
+
+### toggleFavorite()
+
+Toggle favorite status (add if not favorited, remove if favorited).
+
+```typescript
+function toggleFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<boolean>
+```
+
+**Returns:** `true` if now favorited, `false` if removed.
+
+**Example:**
+```typescript
+const nowFavorited = await toggleFavorite(user.id, 'la-pergola');
+if (nowFavorited) {
+  showToast('Añadido a favoritos');
+} else {
+  showToast('Eliminado de favoritos');
+}
+```
+
+---
+
+### getFavoritesCount()
+
+Get total number of favorites for a user.
+
+```typescript
+function getFavoritesCount(userId: string): Promise<number>
+```
+
+**Example:**
+```typescript
+const count = await getFavoritesCount(user.id);
+console.log('User has', count, 'favorites');
+```
+
+---
+
+## Complete Usage Example
+
+Here's a complete example showing authentication and data operations:
+
+```typescript
+import { 
+  signInWithGoogle, 
+  getCurrentUser,
+  getFullProfile,
+  saveUserPreferences,
+  toggleFavorite
+} from '@/lib/supabase';
+
+// 1. Sign in with Google
+await signInWithGoogle();
+
+// 2. Get current user
+const user = await getCurrentUser();
+if (!user) {
+  throw new Error('Not authenticated');
+}
+
+// 3. Get full profile
+const profile = await getFullProfile(user.id);
+console.log('Profile:', profile);
+
+// 4. Save preferences
+if (!profile.preferences) {
+  await saveUserPreferences({
+    user_id: user.id,
+    experiencia: ['aventura', 'naturaleza'],
+    duracion: 'dia-completo',
+    dificultad: 'moderado',
+    grupo: 'familia',
+    intereses: ['cascadas', 'miradores']
+  });
+}
+
+// 5. Toggle favorite
+const isFav = await toggleFavorite(user.id, 'la-pergola');
+console.log('Is favorited:', isFav);
+```
+
+---
+
+## Error Handling
+
+All database functions return `{ data, error }` tuples:
+
+```typescript
+const { data, error } = await getUserProfile(user.id);
+
+if (error) {
+  console.error('Database error:', error.message);
+  // Handle error (show toast, redirect, etc.)
+  return;
+}
+
+if (!data) {
+  console.log('No profile found');
+  return;
+}
+
+// Success - use data
+console.log('Profile:', data);
+```
+
+---
+
+## Related Documentation
+
+- [User Data Types](/api/types/user) - TypeScript interfaces
+- [Database Schema](/api/database/schema) - Table structures
+- [Database Migrations](/api/database/migrations) - SQL setup scripts
+- [Authentication Guide](/features/authentication) - Auth implementation details

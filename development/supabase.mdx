@@ -1,0 +1,751 @@
+---
+title: Supabase Integration
+description: Database schema, helper functions, and real-time features
+icon: 'database'
+---
+
+## Overview
+
+The platform uses **Supabase** as the backend-as-a-service, providing:
+- **PostgreSQL Database** with Row-Level Security (RLS)
+- **Authentication** via OAuth providers (Google, Facebook) and email/password
+- **Real-time Subscriptions** for live data updates
+- **Storage** for user-generated content
+
+All database interactions are centralized in `src/lib/supabase.ts`.
+
+## Client Setup
+
+### Configuration
+
+```typescript
+// src/lib/supabase.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+### Environment Variables
+
+```bash
+# .env
+PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+<Warning>
+**PUBLIC_** prefix means these variables are exposed to the client. Never use service role keys with this prefix.
+</Warning>
+
+## Database Schema
+
+### `user_profiles`
+
+Stores user information and authentication metadata.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` | Primary key (matches auth.users.id) |
+| `email` | `text` | User email address |
+| `full_name` | `text` | Display name |
+| `avatar_url` | `text` | Profile picture URL |
+| `provider` | `text` | OAuth provider (google, facebook, email) |
+| `onboarding_completed` | `boolean` | Whether user completed tourism onboarding |
+| `created_at` | `timestamptz` | Account creation time |
+| `updated_at` | `timestamptz` | Last profile update |
+
+**TypeScript Type**:
+
+```typescript
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string;
+  provider: string;
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### `user_preferences`
+
+Stores tourism preferences collected during onboarding.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | Foreign key to user_profiles |
+| `experiencia` | `text[]` | Preferred experiences (aventura, cultura, naturaleza...) |
+| `duracion` | `text` | Trip duration preference (medio-dia, dia-completo...) |
+| `dificultad` | `text` | Difficulty level (facil, moderado, dificil, extremo) |
+| `grupo` | `text` | Travel group type (solo, pareja, familia, amigos) |
+| `intereses` | `text[]` | Specific interests (cascadas, miradores, artesanias...) |
+| `created_at` | `timestamptz` | Preference creation time |
+
+**TypeScript Type**:
+
+```typescript
+export interface UserPreferences {
+  id?: string;
+  user_id: string;
+  experiencia: string[];  // ['aventura', 'naturaleza']
+  duracion: string;       // 'dia-completo'
+  dificultad: string;     // 'moderado'
+  grupo: string;          // 'familia'
+  intereses: string[];    // ['cascadas', 'miradores']
+  created_at?: string;
+}
+```
+
+### `user_routes`
+
+Stores generated personalized tourism routes.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | Foreign key to user_profiles |
+| `user_name` | `text` | User's display name (denormalized) |
+| `route_name` | `text` | Generated route name |
+| `atractivos` | `text[]` | Array of attraction IDs/slugs |
+| `ticket_url` | `text` | URL to generated ticket image |
+| `share_code` | `text` | Unique share code (nanoid) |
+| `badges` | `text[]` | Earned badge IDs |
+| `created_at` | `timestamptz` | Route creation time |
+
+**TypeScript Type**:
+
+```typescript
+export interface UserRoute {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  route_name: string;
+  atractivos: string[];    // ['cascada-texpico', 'mirador-zongolica']
+  ticket_url: string;      // '/ruta/xyz123'
+  share_code: string;      // 'xyz123'
+  badges: string[];        // ['aventurero', 'explorador']
+  created_at: string;
+}
+```
+
+### `user_badges`
+
+Tracks unlocked achievements and badges.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | Foreign key to user_profiles |
+| `badge_type` | `text` | Badge identifier (aventurero, explorador...) |
+| `unlocked_at` | `timestamptz` | When badge was earned |
+
+**TypeScript Type**:
+
+```typescript
+export interface UserBadge {
+  id: string;
+  user_id: string;
+  badge_type: string;  // 'aventurero'
+  unlocked_at: string;
+}
+```
+
+### `user_favorites`
+
+Stores user's saved attractions.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | `uuid` | Primary key |
+| `user_id` | `uuid` | Foreign key to user_profiles |
+| `atractivo_slug` | `text` | Attraction slug |
+| `created_at` | `timestamptz` | When favorited |
+
+**TypeScript Type**:
+
+```typescript
+export interface UserFavorite {
+  id: string;
+  user_id: string;
+  atractivo_slug: string;  // 'cascada-texpico'
+  created_at: string;
+}
+```
+
+## Authentication Functions
+
+### Get Current User
+
+```typescript
+export async function getCurrentUser() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+```
+
+**Usage**:
+
+```typescript
+const user = await getCurrentUser();
+if (!user) {
+  // Redirect to login
+}
+```
+
+### Email/Password Authentication
+
+```typescript
+// Sign in
+export async function signInWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+  return { data, error };
+}
+
+// Sign up
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  name?: string
+) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: name || email.split('@')[0]
+      }
+    }
+  });
+  return { data, error };
+}
+```
+
+### OAuth with Google
+
+```typescript
+export async function signInWithGoogle(
+  redirectPath = '/turismo?onboarding=1'
+) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback?return_url=${encodeURIComponent(redirectPath)}`
+    }
+  });
+  return { data, error };
+}
+```
+
+**Flow**:
+
+1. User clicks "Sign in with Google"
+2. Redirects to Google OAuth
+3. User authorizes
+4. Redirects to `/auth/callback`
+5. Callback page sets session
+6. Redirects to `return_url`
+
+See [Authentication](/development/authentication) for full implementation.
+
+### Sign Out
+
+```typescript
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  return { error };
+}
+```
+
+## Profile Functions
+
+### Get User Profile
+
+```typescript
+export async function getUserProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  return { data: data as UserProfile | null, error };
+}
+```
+
+### Update Profile
+
+```typescript
+export async function upsertUserProfile(
+  profile: Partial<UserProfile> & { id: string }
+) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .upsert([{ ...profile, updated_at: new Date().toISOString() }])
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+### Mark Onboarding Complete
+
+```typescript
+export async function markOnboardingCompleted(userId: string) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update({
+      onboarding_completed: true,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+### Check Onboarding Status
+
+```typescript
+export async function isOnboardingCompleted(userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('onboarding_completed')
+    .eq('id', userId)
+    .single();
+  return data?.onboarding_completed ?? false;
+}
+```
+
+### Get Full Profile
+
+```typescript
+export async function getFullProfile(userId: string) {
+  const [profileRes, prefsRes, badgesRes, routesRes, favoritesRes] = await Promise.all([
+    getUserProfile(userId),
+    getUserPreferences(userId),
+    getUserBadges(userId),
+    getUserRoutes(userId),
+    getUserFavorites(userId),
+  ]);
+  return {
+    profile: profileRes.data,
+    preferences: prefsRes.data,
+    badges: badgesRes.data ?? [],
+    routes: routesRes.data ?? [],
+    favorites: favoritesRes.data ?? [],
+  };
+}
+```
+
+## Preferences Functions
+
+### Save Preferences
+
+```typescript
+export async function saveUserPreferences(preferences: UserPreferences) {
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .upsert([preferences], { onConflict: 'user_id' })  // Update if exists
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+### Get Preferences
+
+```typescript
+export async function getUserPreferences(userId: string) {
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return { data, error };
+}
+```
+
+**Usage Example**:
+
+```typescript
+const user = await getCurrentUser();
+const { data: prefs } = await getUserPreferences(user.id);
+
+if (prefs?.experiencia.includes('aventura')) {
+  // Show adventure content
+}
+```
+
+## Route Functions
+
+### Save Route
+
+```typescript
+export async function saveUserRoute(
+  route: Omit<UserRoute, 'id' | 'created_at'>
+) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .insert([route])
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+**Usage**:
+
+```typescript
+import { nanoid } from 'nanoid';
+import { generateRouteName } from '@/lib/recommendations';
+
+const shareCode = nanoid(10);
+const routeName = generateRouteName(preferences);
+
+await saveUserRoute({
+  user_id: user.id,
+  user_name: user.full_name,
+  route_name: routeName,
+  atractivos: ['cascada-texpico', 'mirador-zongolica'],
+  ticket_url: `/ruta/${shareCode}`,
+  share_code: shareCode,
+  badges: ['aventurero']
+});
+```
+
+### Get Route by Share Code
+
+```typescript
+export async function getUserRoute(shareCode: string) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .select('*, user:user_id(*)')  // Join with user profile
+    .eq('share_code', shareCode)
+    .single();
+  return { data, error };
+}
+```
+
+### Get All User Routes
+
+```typescript
+export async function getUserRoutes(userId: string) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return { data, error };
+}
+```
+
+### Get Latest Route
+
+```typescript
+export async function getLatestUserRoute(userId: string) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data;
+}
+```
+
+## Badge Functions
+
+### Unlock Badge
+
+```typescript
+export async function unlockBadge(userId: string, badgeType: string) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .insert([{ user_id: userId, badge_type: badgeType }])
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+### Get User Badges
+
+```typescript
+export async function getUserBadges(userId: string) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select('*')
+    .eq('user_id', userId)
+    .order('unlocked_at', { ascending: false });
+  return { data, error };
+}
+```
+
+### Check Badge Ownership
+
+```typescript
+export async function hasBadge(
+  userId: string,
+  badgeType: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('user_badges')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('badge_type', badgeType)
+    .single();
+  return !!data;
+}
+```
+
+**Usage**:
+
+```typescript
+if (await hasBadge(user.id, 'aventurero')) {
+  // Show special content
+}
+```
+
+## Favorites Functions
+
+### Add Favorite
+
+```typescript
+export async function addFavorite(userId: string, atractivoSlug: string) {
+  const { data, error } = await supabase
+    .from('user_favorites')
+    .insert([{ user_id: userId, atractivo_slug: atractivoSlug }])
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+### Remove Favorite
+
+```typescript
+export async function removeFavorite(userId: string, atractivoSlug: string) {
+  const { error } = await supabase
+    .from('user_favorites')
+    .delete()
+    .eq('user_id', userId)
+    .eq('atractivo_slug', atractivoSlug);
+  return { error };
+}
+```
+
+### Toggle Favorite
+
+```typescript
+export async function toggleFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<boolean> {
+  const isFav = await isFavorite(userId, atractivoSlug);
+  if (isFav) {
+    await removeFavorite(userId, atractivoSlug);
+    return false;
+  } else {
+    await addFavorite(userId, atractivoSlug);
+    return true;
+  }
+}
+```
+
+### Check Favorite Status
+
+```typescript
+export async function isFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('user_favorites')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('atractivo_slug', atractivoSlug)
+    .single();
+  return !!data;
+}
+```
+
+### Get All Favorites
+
+```typescript
+export async function getUserFavorites(userId: string) {
+  const { data, error } = await supabase
+    .from('user_favorites')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return { data: data as UserFavorite[] | null, error };
+}
+```
+
+### Get Favorites Count
+
+```typescript
+export async function getFavoritesCount(userId: string): Promise<number> {
+  const { count } = await supabase
+    .from('user_favorites')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  return count ?? 0;
+}
+```
+
+## Real-time Subscriptions
+
+### Listen to Auth Changes
+
+```typescript
+const { data: { subscription } } = supabase.auth.onAuthStateChange(
+  (event, session) => {
+    if (event === 'SIGNED_IN') {
+      console.log('User signed in:', session.user);
+    }
+    if (event === 'SIGNED_OUT') {
+      console.log('User signed out');
+    }
+  }
+);
+
+// Cleanup
+subscription.unsubscribe();
+```
+
+### Listen to Database Changes
+
+```typescript
+const channel = supabase
+  .channel('user_routes')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'user_routes',
+      filter: `user_id=eq.${userId}`
+    },
+    (payload) => {
+      console.log('New route created:', payload.new);
+    }
+  )
+  .subscribe();
+
+// Cleanup
+channel.unsubscribe();
+```
+
+## Example: Complete Onboarding Flow
+
+```typescript
+import {
+  getCurrentUser,
+  saveUserPreferences,
+  saveUserRoute,
+  unlockBadge,
+  markOnboardingCompleted
+} from '@/lib/supabase';
+import { generateRouteName } from '@/lib/recommendations';
+import { nanoid } from 'nanoid';
+
+async function completeOnboarding(preferences: UserPreferences) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // 1. Save preferences
+  await saveUserPreferences({
+    user_id: user.id,
+    ...preferences
+  });
+
+  // 2. Generate personalized route
+  const routeName = generateRouteName(preferences);
+  const shareCode = nanoid(10);
+  const atractivos = selectAtractivos(preferences);  // Your logic
+
+  await saveUserRoute({
+    user_id: user.id,
+    user_name: user.user_metadata.name,
+    route_name: routeName,
+    atractivos,
+    ticket_url: `/ruta/${shareCode}`,
+    share_code: shareCode,
+    badges: ['explorador']
+  });
+
+  // 3. Unlock onboarding badge
+  await unlockBadge(user.id, 'explorador');
+
+  // 4. Mark onboarding complete
+  await markOnboardingCompleted(user.id);
+
+  return shareCode;
+}
+```
+
+## Row-Level Security (RLS)
+
+All tables are protected with RLS policies:
+
+```sql
+-- Users can only read/write their own data
+CREATE POLICY "Users can view own profile"
+ON user_profiles FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+ON user_profiles FOR UPDATE
+USING (auth.uid() = id);
+
+-- Public can view shared routes
+CREATE POLICY "Public can view routes by share code"
+ON user_routes FOR SELECT
+USING (true);
+```
+
+## Error Handling
+
+```typescript
+const { data, error } = await saveUserRoute(route);
+
+if (error) {
+  console.error('Failed to save route:', error.message);
+  // Show user-friendly error
+  toast.error('No se pudo guardar la ruta. Inténtalo de nuevo.');
+  return;
+}
+
+// Success
+toast.success('¡Ruta guardada!');
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/development/authentication">
+    Implement authentication flows with AuthButtons
+  </Card>
+  <Card title="Tourism Components" icon="map" href="/development/components/tourism">
+    TurismoOnboarding and route generation
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understanding the data flow
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    All technologies powering the platform
+  </Card>
+</CardGroup>

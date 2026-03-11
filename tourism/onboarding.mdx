@@ -1,0 +1,294 @@
+---
+title: "Interactive Onboarding"
+description: "5-step questionnaire that personalizes the tourism experience"
+---
+
+## Overview
+
+The tourism onboarding system is a 5-step interactive questionnaire that collects user preferences to generate personalized tourism recommendations. It's implemented as a modal component that appears after authentication.
+
+## Onboarding Flow
+
+<Steps>
+  <Step title="Trigger Onboarding">
+    User clicks "Descubre tu ruta" button or visits `/turismo?onboarding=1`
+  </Step>
+  <Step title="Check Authentication">
+    System checks if user is authenticated. If not, shows OAuth login options
+  </Step>
+  <Step title="Question 1: Experiences">
+    User selects types of experiences they enjoy (naturaleza, cultura, gastronomia, etc.)
+  </Step>
+  <Step title="Question 2: Duration">
+    User chooses trip duration (unas-horas, medio-dia, dia-completo, varios-dias)
+  </Step>
+  <Step title="Question 3: Difficulty">
+    User selects difficulty level (facil, moderado, dificil, extremo)
+  </Step>
+  <Step title="Question 4: Travel Group">
+    User indicates who they're traveling with (solo, pareja, familia, amigos)
+  </Step>
+  <Step title="Question 5: Specific Interests">
+    User selects specific interests (cascadas, miradores, cuevas, cafe, artesanias, etc.)
+  </Step>
+  <Step title="Generate Results">
+    System calculates recommendations, unlocks badges, and generates unique ticket
+  </Step>
+</Steps>
+
+## Step Details
+
+### Step 1: Experience Types
+
+```typescript
+const EXPERIENCIAS = [
+  { value: 'naturaleza', label: 'Naturaleza y ecoturismo', icon: '🌲' },
+  { value: 'cultura', label: 'Cultura y tradiciones', icon: '🎭' },
+  { value: 'gastronomia', label: 'Gastronomía local', icon: '🍽️' },
+  { value: 'aventura', label: 'Aventura y deporte', icon: '⛰️' },
+  { value: 'relajacion', label: 'Relajación', icon: '🧘' },
+];
+```
+
+**Multiple selection allowed** - Users can select multiple experience types to match their interests.
+
+### Step 2: Trip Duration
+
+```typescript
+const DURACIONES = [
+  { value: 'unas-horas', label: 'Unas horas (2-4h)', icon: '⏰' },
+  { value: 'medio-dia', label: 'Medio día (4-6h)', icon: '🌅' },
+  { value: 'dia-completo', label: 'Día completo (6-8h)', icon: '☀️' },
+  { value: 'varios-dias', label: 'Varios días', icon: '🌄' },
+];
+```
+
+**Single selection** - Users choose one duration that fits their schedule.
+
+### Step 3: Difficulty Level
+
+```typescript
+const DIFICULTADES = [
+  { value: 'facil', label: 'Fácil (para todos)', icon: '😊', color: 'green' },
+  { value: 'moderado', label: 'Moderado', icon: '🙂', color: 'blue' },
+  { value: 'dificil', label: 'Difícil', icon: '😅', color: 'orange' },
+  { value: 'extremo', label: 'Extremo', icon: '😤', color: 'red' },
+];
+```
+
+**Single selection** - Determines the physical challenge level users are comfortable with.
+
+<Note>
+  Difficulty levels help filter attractions:
+  - **Fácil**: Short walks, accessible viewpoints, town tours
+  - **Moderado**: Hiking trails, cave exploration with guides
+  - **Difícil**: Long hikes, steep climbs, waterfall descents
+  - **Extremo**: Rappelling, rock climbing, multi-day expeditions
+</Note>
+
+### Step 4: Travel Group
+
+```typescript
+const GRUPOS = [
+  { value: 'solo', label: 'Solo/a', icon: '🚶' },
+  { value: 'pareja', label: 'En pareja', icon: '💑' },
+  { value: 'familia', label: 'Familia', icon: '👨‍👩‍👧‍👦' },
+  { value: 'amigos', label: 'Con amigos', icon: '🤝' },
+];
+```
+
+**Single selection** - Influences recommendations based on group dynamics:
+- **Familia**: Prioritizes safe, accessible locations
+- **Pareja**: Suggests romantic viewpoints and experiences
+- **Amigos**: Recommends adventure and social activities
+- **Solo**: Focuses on safe, well-marked trails
+
+### Step 5: Specific Interests
+
+```typescript
+const INTERESES = [
+  { value: 'cascadas', label: 'Cascadas', icon: '💧' },
+  { value: 'miradores', label: 'Miradores', icon: '🌄' },
+  { value: 'cuevas', label: 'Cuevas y grutas', icon: '🕳️' },
+  { value: 'pueblos', label: 'Pueblos nahuas', icon: '🏘️' },
+  { value: 'cafe', label: 'Café de altura', icon: '☕' },
+  { value: 'artesanias', label: 'Artesanías', icon: '🎨' },
+  { value: 'senderismo', label: 'Senderismo', icon: '🥾' },
+  { value: 'fotografia', label: 'Fotografía', icon: '📷' },
+];
+```
+
+**Multiple selection allowed** - Fine-tunes recommendations to specific attraction types.
+
+## Component Implementation
+
+The onboarding is implemented in `src/components/TurismoOnboarding.tsx`:
+
+```tsx src/components/TurismoOnboarding.tsx
+import { useState, useEffect } from 'react';
+import { supabase, saveUserPreferences } from '@/lib/supabase';
+import { AuthButtons } from './AuthButtons';
+
+export function TurismoOnboarding() {
+  const [step, setStep] = useState(0);
+  const [user, setUser] = useState(null);
+  const [preferences, setPreferences] = useState({
+    experiencia: [],
+    duracion: '',
+    dificultad: '',
+    grupo: '',
+    intereses: []
+  });
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+  }, []);
+
+  const handleNext = () => {
+    if (step < 4) {
+      setStep(step + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!user) return;
+
+    // Save preferences to database
+    await saveUserPreferences({
+      user_id: user.id,
+      ...preferences
+    });
+
+    // Generate recommendations
+    // Unlock badges
+    // Create ticket
+    // Show results
+  };
+
+  if (!user) {
+    return (
+      <div className="text-center">
+        <h2>Inicia sesión para continuar</h2>
+        <AuthButtons />
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal">
+      {step === 0 && <ExperiencesStep />}
+      {step === 1 && <DurationStep />}
+      {step === 2 && <DifficultyStep />}
+      {step === 3 && <GroupStep />}
+      {step === 4 && <InterestsStep />}
+    </div>
+  );
+}
+```
+
+## Data Storage
+
+Preferences are saved to the `user_preferences` table:
+
+```sql
+CREATE TABLE user_preferences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  experiencia TEXT[] NOT NULL,
+  duracion TEXT NOT NULL,
+  dificultad TEXT NOT NULL,
+  grupo TEXT NOT NULL,
+  intereses TEXT[] NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+## Triggering Onboarding
+
+### Method 1: URL Parameter
+
+Add `?onboarding=1` to the tourism page URL:
+
+```
+https://yourdomain.com/turismo?onboarding=1
+```
+
+### Method 2: Button Click
+
+```tsx
+<button 
+  onClick={() => {
+    window.dispatchEvent(new CustomEvent('open-turismo-onboarding'));
+  }}
+>
+  Descubre tu ruta
+</button>
+```
+
+### Method 3: Automatic for New Users
+
+Check if user has completed onboarding:
+
+```typescript
+const { data: preferences } = await getUserPreferences(user.id);
+if (!preferences) {
+  // Show onboarding modal
+}
+```
+
+## Best Practices
+
+<Note>
+  **Progressive Disclosure**: Show one question at a time to avoid overwhelming users
+</Note>
+
+<Note>
+  **Visual Feedback**: Highlight selected options with color and icons
+</Note>
+
+<Note>
+  **Skip Option**: Allow users to skip optional questions (e.g., specific interests)
+</Note>
+
+<Warning>
+  Always check authentication before showing the questionnaire. Unauthenticated users cannot save preferences.
+</Warning>
+
+## Analytics
+
+Track onboarding completion:
+
+```typescript
+// Track step completion
+analytics.track('onboarding_step_completed', {
+  step: stepNumber,
+  user_id: user.id
+});
+
+// Track full completion
+analytics.track('onboarding_completed', {
+  user_id: user.id,
+  preferences: preferences
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Recommendations" icon="sparkles" href="/tourism/recommendations">
+    Learn how recommendations are generated from preferences
+  </Card>
+  <Card title="Badges" icon="trophy" href="/tourism/badges">
+    See which badges are unlocked during onboarding
+  </Card>
+  <Card title="Authentication" icon="shield-check" href="/features/authentication">
+    Understand the OAuth authentication flow
+  </Card>
+  <Card title="Component Code" icon="code" href="/development/components/tourism">
+    View the full TurismoOnboarding component
+  </Card>
+</CardGroup>

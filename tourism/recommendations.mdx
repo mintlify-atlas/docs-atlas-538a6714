@@ -1,0 +1,318 @@
+---
+title: "Recommendation Engine"
+description: "Algorithm that generates personalized tourist attraction recommendations"
+---
+
+## Overview
+
+The recommendation engine analyzes user preferences from the onboarding questionnaire and matches them against the catalog of 17 tourist attractions to generate personalized suggestions.
+
+## Algorithm
+
+The recommendation system uses a **weighted scoring algorithm** implemented in `src/lib/recommendations.ts`:
+
+```typescript src/lib/recommendations.ts
+export function generateRecommendations(
+  preferences: UserPreferences,
+  allAtractivos: Atractivo[]
+): Atractivo[] {
+  let scored = allAtractivos.map(atractivo => ({
+    atractivo,
+    score: calculateScore(atractivo, preferences)
+  }));
+
+  // Sort by score (highest first)
+  scored.sort((a, b) => b.score - a.score);
+
+  // Return top 10 recommendations
+  return scored.slice(0, 10).map(s => s.atractivo);
+}
+```
+
+## Scoring System
+
+Each attraction is scored based on multiple factors:
+
+### 1. Experience Type Match (Weight: 3)
+
+```typescript
+// Coincidencia con experiencias (peso: 3)
+if (prefs.experiencia.length > 0) {
+  const experienciaMatch = prefs.experiencia.some(exp => 
+    atractivo.tipo?.includes(exp) || 
+    atractivo.descripcion?.toLowerCase().includes(exp)
+  );
+  if (experienciaMatch) score += 3;
+}
+```
+
+Matches user-selected experience types (naturaleza, cultura, gastronomia) with attraction categories.
+
+### 2. Interest Match (Weight: 3)
+
+```typescript
+// Coincidencia con intereses (peso: 3)
+if (prefs.intereses.length > 0) {
+  const interesMatch = prefs.intereses.some(int => 
+    atractivo.tipo === int ||
+    atractivo.nombre.toLowerCase().includes(int)
+  );
+  if (interesMatch) score += 3;
+}
+```
+
+Matches specific interests (cascadas, miradores, cuevas) with attraction types.
+
+### 3. Difficulty Match (Weight: 2)
+
+```typescript
+// Coincidencia con dificultad (peso: 2)
+if (atractivo.dificultad && atractivo.dificultad === prefs.dificultad) {
+  score += 2;
+}
+```
+
+Prefers attractions that match the user's selected difficulty level.
+
+### 4. Duration Match (Weight: 1)
+
+```typescript
+// Coincidencia con duración (peso: 1)
+if (atractivo.duracion) {
+  const duracionMatch = matchDuracion(atractivo.duracion, prefs.duracion);
+  if (duracionMatch) score += 1;
+}
+```
+
+Matches attraction visit duration with user's available time.
+
+### 5. Group-Based Bonuses
+
+#### Family Groups (+2)
+
+```typescript
+// Bonificación por grupo familiar (lugares seguros y accesibles)
+if (prefs.grupo === 'familia') {
+  if (atractivo.dificultad === 'facil') score += 1;
+  if (atractivo.tipo === 'pueblos') score += 1;
+}
+```
+
+Prioritizes easy, accessible attractions for families with children.
+
+#### Adventure Groups (+2)
+
+```typescript
+// Bonificación para aventureros extremos
+if (prefs.grupo === 'amigos' && prefs.dificultad === 'extremo') {
+  if (atractivo.tipo === 'cascadas' || atractivo.tipo === 'miradores') {
+    score += 2;
+  }
+}
+```
+
+Boosts challenging attractions for adventure-seeking friend groups.
+
+## Example Scoring
+
+Let's calculate the score for **Cascada de Atlahuitzia** with these preferences:
+
+```json
+{
+  "experiencia": ["naturaleza", "aventura"],
+  "duracion": "unas-horas",
+  "dificultad": "moderado",
+  "grupo": "amigos",
+  "intereses": ["cascadas", "fotografia"]
+}
+```
+
+**Cascada de Atlahuitzia attributes:**
+- `tipo`: "cascadas"
+- `categoria`: "Naturaleza"
+- `dificultad`: "moderado"
+- `duracion`: "2-3 horas"
+
+**Score calculation:**
+1. Experience match ("naturaleza") → +3
+2. Interest match ("cascadas") → +3
+3. Difficulty match ("moderado") → +2
+4. Duration match ("unas-horas") → +1
+5. Friend group + cascadas → +1
+
+**Total score: 10** 🏆
+
+## Duration Matching
+
+The `matchDuracion()` helper function maps user preferences to attraction durations:
+
+```typescript
+function matchDuracion(atractivoDuracion: string, prefDuracion: string): boolean {
+  const duracionMap = {
+    'unas-horas': ['1-2 horas', '2-3 horas', '2-4 horas'],
+    'medio-dia': ['3-4 horas', '4-6 horas'],
+    'dia-completo': ['6-8 horas', '8+ horas'],
+    'varios-dias': ['8+ horas', 'Multi-day']
+  };
+
+  return duracionMap[prefDuracion]?.some(d => 
+    atractivoDuracion.includes(d)
+  ) ?? false;
+}
+```
+
+## Recommendation Display
+
+Recommendations are displayed in a responsive grid:
+
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {recommendations.map((atractivo) => (
+    <AtractivoCard
+      key={atractivo.id}
+      {...atractivo}
+      score={atractivo.score}
+    />
+  ))}
+</div>
+```
+
+Each card shows:
+- Attraction image
+- Name and category
+- Brief description
+- Difficulty badge
+- Duration estimate
+- Match score indicator
+
+## Filtering and Sorting
+
+Users can further refine recommendations:
+
+### By Category
+
+```typescript
+const filteredByCategory = recommendations.filter(a => 
+  a.categoria === selectedCategory
+);
+```
+
+### By Difficulty
+
+```typescript
+const filteredByDifficulty = recommendations.filter(a => 
+  a.dificultad === selectedDifficulty
+);
+```
+
+### By Zone
+
+```typescript
+const filteredByZone = recommendations.filter(a => 
+  a.zona === selectedZone
+);
+```
+
+## Real-Time Updates
+
+Recommendations can be regenerated when preferences change:
+
+```typescript
+useEffect(() => {
+  const newRecommendations = generateRecommendations(
+    preferences,
+    allAtractivos
+  );
+  setRecommendations(newRecommendations);
+}, [preferences]);
+```
+
+## Performance Optimization
+
+### Caching
+
+Cache recommendations to avoid recalculation:
+
+```typescript
+const cacheKey = JSON.stringify(preferences);
+const cached = recommendationsCache.get(cacheKey);
+if (cached) return cached;
+```
+
+### Memoization
+
+Use React.useMemo for expensive calculations:
+
+```typescript
+const recommendations = useMemo(
+  () => generateRecommendations(preferences, allAtractivos),
+  [preferences, allAtractivos]
+);
+```
+
+## Improving the Algorithm
+
+Future enhancements:
+
+<Note>
+  **Machine Learning**: Train a model on user ratings and behavior
+</Note>
+
+<Note>
+  **Collaborative Filtering**: "Users like you also enjoyed..."
+</Note>
+
+<Note>
+  **Temporal Factors**: Consider season, weather, and time of day
+</Note>
+
+<Note>
+  **Social Signals**: Factor in popularity and user reviews
+</Note>
+
+## Testing Recommendations
+
+Test with different preference combinations:
+
+```typescript
+// Test case 1: Family with young children
+const familyPrefs = {
+  experiencia: ['naturaleza', 'cultura'],
+  duracion: 'medio-dia',
+  dificultad: 'facil',
+  grupo: 'familia',
+  intereses: ['pueblos', 'artesanias']
+};
+
+const familyRecs = generateRecommendations(familyPrefs, allAtractivos);
+console.log('Family recommendations:', familyRecs);
+
+// Test case 2: Adventure seekers
+const adventurePrefs = {
+  experiencia: ['aventura'],
+  duracion: 'dia-completo',
+  dificultad: 'extremo',
+  grupo: 'amigos',
+  intereses: ['cascadas', 'miradores', 'senderismo']
+};
+
+const adventureRecs = generateRecommendations(adventurePrefs, allAtractivos);
+console.log('Adventure recommendations:', adventureRecs);
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Attractions Catalog" icon="mountain" href="/tourism/attractions">
+    Browse all 17 tourist attractions in the system
+  </Card>
+  <Card title="Badge Unlocking" icon="trophy" href="/tourism/badges">
+    See how badges are unlocked based on preferences
+  </Card>
+  <Card title="Ticket Generation" icon="ticket" href="/tourism/tickets">
+    Generate visual tickets with recommendations
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/types/tourism">
+    View TypeScript interfaces for recommendations
+  </Card>
+</CardGroup>

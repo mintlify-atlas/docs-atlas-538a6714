@@ -1,0 +1,480 @@
+---
+title: 'User Data Types'
+description: 'TypeScript interfaces for user profiles, preferences, and authentication'
+icon: 'user'
+---
+
+## Overview
+
+This page documents all user-related TypeScript types used in the Zongolica application.
+
+## UserProfile
+
+User profile stored in the `user_profiles` table.
+
+```typescript
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string;
+  provider: string;
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Field Descriptions
+
+<ParamField path="id" type="string">
+  UUID - Primary key, references auth.users(id)
+</ParamField>
+
+<ParamField path="email" type="string">
+  User's email address from authentication provider
+</ParamField>
+
+<ParamField path="full_name" type="string">
+  User's full name
+</ParamField>
+
+<ParamField path="avatar_url" type="string">
+  URL to user's profile picture (from OAuth provider)
+</ParamField>
+
+<ParamField path="provider" type="string">
+  Authentication provider ("google", "facebook", "email")
+</ParamField>
+
+<ParamField path="onboarding_completed" type="boolean">
+  Whether user has completed the onboarding flow
+</ParamField>
+
+<ParamField path="created_at" type="string">
+  ISO 8601 timestamp of profile creation
+</ParamField>
+
+<ParamField path="updated_at" type="string">
+  ISO 8601 timestamp of last profile update
+</ParamField>
+
+### Example
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "email": "juan@example.com",
+  "full_name": "Juan Pérez",
+  "avatar_url": "https://lh3.googleusercontent.com/a/...",
+  "provider": "google",
+  "onboarding_completed": true,
+  "created_at": "2024-03-15T10:30:00.000Z",
+  "updated_at": "2024-03-15T10:30:00.000Z"
+}
+```
+
+---
+
+## UserPreferences
+
+User preferences collected during onboarding, stored in the `user_preferences` table.
+
+```typescript
+interface UserPreferences {
+  id?: string;
+  user_id: string;
+  experiencia: string[];
+  duracion: string;
+  dificultad: string;
+  grupo: string;
+  intereses: string[];
+  created_at?: string;
+}
+```
+
+### Field Descriptions
+
+<ParamField path="id" type="string" optional>
+  UUID - Primary key (auto-generated)
+</ParamField>
+
+<ParamField path="user_id" type="string">
+  UUID - References user_profiles(id)
+</ParamField>
+
+<ParamField path="experiencia" type="string[]">
+  Types of experiences the user prefers
+  
+  **Possible values:**
+  - "aventura" - Adventure activities
+  - "naturaleza" - Nature and landscapes
+  - "cultura" - Cultural experiences
+  - "gastronomia" - Food and beverages
+  - "relax" - Relaxation and wellness
+</ParamField>
+
+<ParamField path="duracion" type="string">
+  Preferred duration of visits
+  
+  **Possible values:**
+  - "medio-dia" - Half day (2-4 hours)
+  - "dia-completo" - Full day (6-8 hours)
+  - "fin-de-semana" - Weekend (2-3 days)
+</ParamField>
+
+<ParamField path="dificultad" type="string">
+  Physical difficulty level the user is comfortable with
+  
+  **Possible values:**
+  - "facil" - Easy (accessible to all)
+  - "moderado" - Moderate (requires some fitness)
+  - "dificil" - Difficult (requires good physical condition)
+</ParamField>
+
+<ParamField path="grupo" type="string">
+  Who the user typically travels with
+  
+  **Possible values:**
+  - "solo" - Solo traveler
+  - "pareja" - Couple
+  - "familia" - Family with children
+  - "amigos" - Friends
+</ParamField>
+
+<ParamField path="intereses" type="string[]">
+  Specific interests and attractions
+  
+  **Possible values:**
+  - "cascadas" - Waterfalls
+  - "miradores" - Viewpoints
+  - "cuevas" - Caves
+  - "senderismo" - Hiking
+  - "rappel" - Rappelling
+  - "kayak" - Kayaking
+  - "historia" - History
+  - "fotografia" - Photography
+</ParamField>
+
+<ParamField path="created_at" type="string" optional>
+  ISO 8601 timestamp (auto-generated)
+</ParamField>
+
+### Example
+
+```json
+{
+  "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "experiencia": ["aventura", "naturaleza"],
+  "duracion": "dia-completo",
+  "dificultad": "moderado",
+  "grupo": "familia",
+  "intereses": ["cascadas", "miradores", "senderismo"],
+  "created_at": "2024-03-15T10:35:00.000Z"
+}
+```
+
+---
+
+## UserFavorite
+
+User's favorite tourist attractions, stored in the `user_favorites` table.
+
+```typescript
+interface UserFavorite {
+  id: string;
+  user_id: string;
+  atractivo_slug: string;
+  created_at: string;
+}
+```
+
+### Field Descriptions
+
+<ParamField path="id" type="string">
+  UUID - Primary key (auto-generated)
+</ParamField>
+
+<ParamField path="user_id" type="string">
+  UUID - References user_profiles(id)
+</ParamField>
+
+<ParamField path="atractivo_slug" type="string">
+  Slug of the tourist attraction (e.g., "cascada-atlahuitzia")
+</ParamField>
+
+<ParamField path="created_at" type="string">
+  ISO 8601 timestamp when favorite was added
+</ParamField>
+
+### Example
+
+```json
+{
+  "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "atractivo_slug": "cascada-atlahuitzia",
+  "created_at": "2024-03-15T11:00:00.000Z"
+}
+```
+
+---
+
+## Authentication Functions
+
+Functions for user authentication.
+
+### signInWithGoogle()
+
+Initiate Google OAuth sign-in flow.
+
+```typescript
+function signInWithGoogle(redirectPath?: string): Promise<{
+  data: AuthResponse | null;
+  error: AuthError | null;
+}>;
+```
+
+**Parameters:**
+- `redirectPath` (optional) - Path to redirect after authentication (default: `/turismo?onboarding=1`)
+
+**Example:**
+
+```typescript
+const { data, error } = await signInWithGoogle('/perfil');
+if (error) {
+  console.error('Sign in failed:', error);
+}
+```
+
+### signOut()
+
+Sign out the current user.
+
+```typescript
+function signOut(): Promise<{
+  error: AuthError | null;
+}>;
+```
+
+**Example:**
+
+```typescript
+const { error } = await signOut();
+if (!error) {
+  window.location.href = '/';
+}
+```
+
+### getCurrentUser()
+
+Get the currently authenticated user.
+
+```typescript
+function getCurrentUser(): Promise<User | null>;
+```
+
+**Example:**
+
+```typescript
+const user = await getCurrentUser();
+if (user) {
+  console.log('Logged in as:', user.email);
+}
+```
+
+---
+
+## Profile Functions
+
+Functions for managing user profiles.
+
+### getUserProfile()
+
+Get user profile by ID.
+
+```typescript
+function getUserProfile(userId: string): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | null;
+}>;
+```
+
+### upsertUserProfile()
+
+Create or update user profile.
+
+```typescript
+function upsertUserProfile(
+  profile: Partial<UserProfile> & { id: string }
+): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | null;
+}>;
+```
+
+### markOnboardingCompleted()
+
+Mark user's onboarding as completed.
+
+```typescript
+function markOnboardingCompleted(userId: string): Promise<{
+  data: UserProfile | null;
+  error: PostgrestError | null;
+}>;
+```
+
+### isOnboardingCompleted()
+
+Check if user has completed onboarding.
+
+```typescript
+function isOnboardingCompleted(userId: string): Promise<boolean>;
+```
+
+### getFullProfile()
+
+Get complete user profile with preferences, badges, routes, and favorites.
+
+```typescript
+function getFullProfile(userId: string): Promise<{
+  profile: UserProfile | null;
+  preferences: UserPreferences | null;
+  badges: UserBadge[];
+  routes: UserRoute[];
+  favorites: UserFavorite[];
+}>;
+```
+
+**Example:**
+
+```typescript
+const profile = await getFullProfile(user.id);
+console.log('User has', profile.badges.length, 'badges');
+console.log('User has', profile.favorites.length, 'favorites');
+```
+
+---
+
+## Preference Functions
+
+Functions for managing user preferences.
+
+### saveUserPreferences()
+
+Save or update user preferences.
+
+```typescript
+function saveUserPreferences(
+  preferences: UserPreferences
+): Promise<{
+  data: UserPreferences | null;
+  error: PostgrestError | null;
+}>;
+```
+
+### getUserPreferences()
+
+Get user preferences.
+
+```typescript
+function getUserPreferences(userId: string): Promise<{
+  data: UserPreferences | null;
+  error: PostgrestError | null;
+}>;
+```
+
+**Example:**
+
+```typescript
+const { data: prefs, error } = await getUserPreferences(user.id);
+if (prefs) {
+  console.log('User prefers:', prefs.experiencia);
+}
+```
+
+---
+
+## Favorite Functions
+
+Functions for managing favorites.
+
+### getUserFavorites()
+
+Get all user favorites.
+
+```typescript
+function getUserFavorites(userId: string): Promise<{
+  data: UserFavorite[] | null;
+  error: PostgrestError | null;
+}>;
+```
+
+### addFavorite()
+
+Add an attraction to favorites.
+
+```typescript
+function addFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<{
+  data: UserFavorite | null;
+  error: PostgrestError | null;
+}>;
+```
+
+### removeFavorite()
+
+Remove an attraction from favorites.
+
+```typescript
+function removeFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<{
+  error: PostgrestError | null;
+}>;
+```
+
+### isFavorite()
+
+Check if an attraction is favorited.
+
+```typescript
+function isFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<boolean>;
+```
+
+### toggleFavorite()
+
+Toggle favorite status (add if not favorited, remove if favorited).
+
+```typescript
+function toggleFavorite(
+  userId: string,
+  atractivoSlug: string
+): Promise<boolean>; // Returns new favorite status
+```
+
+**Example:**
+
+```typescript
+const isFav = await toggleFavorite(user.id, 'cascada-atlahuitzia');
+if (isFav) {
+  console.log('Added to favorites');
+} else {
+  console.log('Removed from favorites');
+}
+```
+
+### getFavoritesCount()
+
+Get total number of favorites for a user.
+
+```typescript
+function getFavoritesCount(userId: string): Promise<number>;
+```

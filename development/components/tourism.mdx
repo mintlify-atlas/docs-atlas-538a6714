@@ -1,0 +1,714 @@
+---
+title: Tourism Components
+description: Interactive tourism components for onboarding, routes, and user engagement
+icon: 'map'
+---
+
+## Overview
+
+Tourism components power the personalized travel experience on the platform. They handle:
+
+- **User onboarding** with preference collection
+- **Route generation** based on user interests
+- **Social sharing** of personalized itineraries
+- **Favorites** and saved attractions
+- **Real-time** user interactions
+
+All tourism components are located in `/src/components/turismo/`.
+
+## TurismoOnboarding.tsx
+
+**Interactive multi-step wizard** for collecting user travel preferences.
+
+### Features
+
+- 5-step onboarding flow with visual choices
+- Full-screen immersive experience
+- Google OAuth authentication
+- Saves preferences to Supabase
+- Generates personalized route
+- Unlocks achievement badges
+- Confetti celebration on completion
+
+### Component Structure
+
+```tsx
+// src/components/turismo/TurismoOnboarding.tsx
+import { useEffect, useState, useCallback } from 'react';
+import {
+  supabase,
+  signInWithGoogle,
+  saveUserPreferences,
+  saveUserRoute,
+  unlockBadge,
+  markOnboardingCompleted,
+  type UserPreferences,
+} from '@/lib/supabase';
+import { generateRouteName } from '@/lib/recommendations';
+import { generateShareCode } from '@/lib/generateTicket';
+import { nanoid } from 'nanoid';
+
+export default function TurismoOnboarding() {
+  const [step, setStep] = useState(0);
+  const [user, setUser] = useState(null);
+  const [preferences, setPreferences] = useState<Partial<UserPreferences>>({});
+  // ...
+}
+```
+
+### Onboarding Steps
+
+#### Step 0: Authentication
+
+Sign in with Google before starting onboarding.
+
+```tsx
+const handleGoogleSignIn = async () => {
+  const { error } = await signInWithGoogle('/turismo?onboarding=1');
+  if (error) {
+    console.error('OAuth error:', error);
+  }
+};
+```
+
+#### Step 1: Experience Type
+
+Choose preferred experiences (multi-select):
+
+```tsx
+const EXPERIENCIAS: Choice[] = [
+  {
+    id: 'aventura',
+    label: 'Aventura',
+    icon: '⛰️',
+    description: 'Cuevas, rappel, descensos',
+    image: '/turismo/gallery/img-5.webp'
+  },
+  {
+    id: 'cultura',
+    label: 'Cultura',
+    icon: '🎭',
+    description: 'Tradición y artesanía',
+    image: '/turismo/gallery/img-2.webp'
+  },
+  {
+    id: 'naturaleza',
+    label: 'Naturaleza',
+    icon: '🌿',
+    description: 'Cascadas y miradores',
+    image: '/turismo/gallery/img-4.webp'
+  },
+  {
+    id: 'gastronomia',
+    label: 'Gastronomía',
+    icon: '🍽️',
+    description: 'Sabores serranos',
+    image: '/turismo/gallery/img-3.webp'
+  },
+  {
+    id: 'relax',
+    label: 'Descanso',
+    icon: '✨',
+    description: 'Paz y contemplación',
+    image: '/turismo/gallery/img-1.webp'
+  }
+];
+```
+
+#### Step 2: Trip Duration
+
+Select how much time available (single-select):
+
+```tsx
+const DURACIONES: Choice[] = [
+  { id: 'medio-dia', label: 'Medio día', icon: '🌅', description: 'Escapada rápida' },
+  { id: 'dia-completo', label: 'Día completo', icon: '☀️', description: 'Sin prisas' },
+  { id: 'fin-semana', label: 'Fin de semana', icon: '🗓️', description: 'Planea con calma' },
+  { id: 'semana', label: 'Más días', icon: '🌙', description: 'Inmersión total' }
+];
+```
+
+#### Step 3: Difficulty Level
+
+Physical intensity preference:
+
+```tsx
+const DIFICULTADES: Choice[] = [
+  { id: 'facil', label: 'Suave', icon: '🚶', description: 'Paseos tranquilos' },
+  { id: 'moderado', label: 'Moderado', icon: '🥾', description: 'Algo de caminata' },
+  { id: 'dificil', label: 'Intenso', icon: '⛰️', description: 'Rutas largas' },
+  { id: 'extremo', label: 'Extremo', icon: '💪', description: 'Solo expertos' }
+];
+```
+
+#### Step 4: Travel Group
+
+Who they're traveling with:
+
+```tsx
+const GRUPOS: Choice[] = [
+  { id: 'solo', label: 'Solo', icon: '🧭', description: 'Mi propio ritmo' },
+  { id: 'pareja', label: 'Pareja', icon: '💑', description: 'Escapada romántica' },
+  { id: 'familia', label: 'Familia', icon: '👨‍👩‍👧', description: 'Con niños' },
+  { id: 'amigos', label: 'Amigos', icon: '👥', description: 'Grupo de aventura' }
+];
+```
+
+#### Step 5: Specific Interests
+
+Fine-tune attraction types (multi-select):
+
+```tsx
+const INTERESES: Choice[] = [
+  { id: 'cascadas', label: 'Cascadas', icon: '💧' },
+  { id: 'miradores', label: 'Miradores', icon: '🌄' },
+  { id: 'artesanias', label: 'Artesanías', icon: '🎨' },
+  { id: 'campamento', label: 'Campamento', icon: '⛺' },
+  { id: 'cuevas', label: 'Cuevas', icon: '🕳️' },
+  { id: 'rios', label: 'Ríos', icon: '🏞️' }
+];
+```
+
+### Completing Onboarding
+
+```tsx
+const handleComplete = async () => {
+  if (!user) return;
+
+  try {
+    // 1. Save preferences
+    await saveUserPreferences({
+      user_id: user.id,
+      experiencia: preferences.experiencia || [],
+      duracion: preferences.duracion || 'dia-completo',
+      dificultad: preferences.dificultad || 'moderado',
+      grupo: preferences.grupo || 'solo',
+      intereses: preferences.intereses || []
+    });
+
+    // 2. Generate route
+    const routeName = generateRouteName(preferences);
+    const shareCode = nanoid(10);
+    const atractivos = selectAtractivos(preferences);  // Your recommendation logic
+
+    await saveUserRoute({
+      user_id: user.id,
+      user_name: user.user_metadata.name,
+      route_name: routeName,
+      atractivos,
+      ticket_url: `/ruta/${shareCode}`,
+      share_code: shareCode,
+      badges: ['explorador']
+    });
+
+    // 3. Unlock badge
+    await unlockBadge(user.id, 'explorador');
+
+    // 4. Mark onboarding complete
+    await markOnboardingCompleted(user.id);
+
+    // 5. Show celebration
+    showConfetti();
+
+    // 6. Redirect to route
+    window.location.href = `/ruta/${shareCode}`;
+  } catch (error) {
+    console.error('Error completing onboarding:', error);
+  }
+};
+```
+
+### Usage in Pages
+
+```astro
+---
+// pages/turismo.astro
+import TurismoOnboarding from '@/components/turismo/TurismoOnboarding.tsx';
+import { getCurrentUser, isOnboardingCompleted } from '@/lib/supabase';
+
+const user = await getCurrentUser();
+let showOnboarding = false;
+
+if (user) {
+  showOnboarding = !(await isOnboardingCompleted(user.id));
+}
+---
+
+{showOnboarding ? (
+  <TurismoOnboarding client:load />
+) : (
+  <p>Bienvenido de vuelta!</p>
+)}
+```
+
+## FavoriteButton.tsx
+
+**Interactive button** to save/unsave attractions.
+
+### Features
+
+- Real-time favorite toggle
+- Optimistic UI updates
+- Authentication check
+- Toast notifications
+- Supabase integration
+
+### Implementation
+
+```tsx
+// src/components/turismo/FavoriteButton.tsx
+import { useState, useEffect } from 'react';
+import { getCurrentUser, isFavorite, toggleFavorite } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { Heart } from 'lucide-react';
+
+interface Props {
+  atractivoSlug: string;
+}
+
+export default function FavoriteButton({ atractivoSlug }: Props) {
+  const [user, setUser] = useState(null);
+  const [isFav, setIsFav] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function init() {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      if (currentUser) {
+        const favStatus = await isFavorite(currentUser.id, atractivoSlug);
+        setIsFav(favStatus);
+      }
+    }
+    init();
+  }, [atractivoSlug]);
+
+  const handleToggle = async () => {
+    if (!user) {
+      toast.error('Inicia sesión para guardar favoritos');
+      return;
+    }
+
+    setLoading(true);
+    // Optimistic update
+    setIsFav(!isFav);
+
+    try {
+      const newStatus = await toggleFavorite(user.id, atractivoSlug);
+      toast.success(newStatus ? '¡Guardado en favoritos!' : 'Eliminado de favoritos');
+    } catch (error) {
+      // Revert on error
+      setIsFav(isFav);
+      toast.error('Error al guardar favorito');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={loading}
+      className="p-2 rounded-full hover:bg-gray-100 transition"
+      aria-label={isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}
+    >
+      <Heart
+        className={`w-6 h-6 transition ${
+          isFav ? 'fill-red-500 text-red-500' : 'text-gray-400'
+        }`}
+      />
+    </button>
+  );
+}
+```
+
+### Usage
+
+```astro
+---
+import FavoriteButton from '@/components/turismo/FavoriteButton.tsx';
+---
+
+<div class="atractivo-header">
+  <h1>Cascada de Texpico</h1>
+  <FavoriteButton client:load atractivoSlug="cascada-texpico" />
+</div>
+```
+
+## ShareButtons.tsx
+
+**Social sharing component** for routes and attractions.
+
+### Features
+
+- Share to Facebook, Twitter, WhatsApp
+- Copy link to clipboard
+- Native share API (mobile)
+- Download ticket image
+
+### Implementation
+
+```tsx
+// src/components/ShareButtons.tsx
+import { useState, useEffect } from 'react';
+
+interface ShareButtonsProps {
+  shareCode?: string;
+  routeName?: string;
+  ticketUrl?: string;
+  url?: string;
+  title?: string;
+  text?: string;
+}
+
+export default function ShareButtons({
+  shareCode,
+  routeName,
+  ticketUrl,
+  url,
+  title,
+  text
+}: ShareButtonsProps) {
+  const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareText, setShareText] = useState('');
+
+  useEffect(() => {
+    if (url) {
+      setShareUrl(url);
+    } else if (shareCode) {
+      setShareUrl(`${window.location.origin}/ruta/${shareCode}`);
+    }
+
+    if (text) {
+      setShareText(text);
+    } else if (routeName) {
+      setShareText(`🎫 ¡Mira mi ruta personalizada en Zongolica! ${routeName}`);
+    }
+  }, [shareCode, routeName, url, text]);
+
+  const shareOnFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  const shareOnTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+  };
+
+  const shareOnWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+    window.open(url, '_blank');
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Error al copiar:', error);
+    }
+  };
+
+  const shareNative = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: routeName,
+          text: shareText,
+          url: shareUrl
+        });
+      } catch (error) {
+        console.log('Error al compartir:', error);
+      }
+    } else {
+      copyToClipboard();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-bold text-gray-900">Comparte tu ruta</h3>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={shareOnFacebook}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1877F2] text-white rounded-xl font-semibold hover:bg-[#166FE5] transition"
+        >
+          {/* Facebook icon SVG */}
+          Facebook
+        </button>
+
+        <button
+          onClick={shareOnTwitter}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-[#1DA1F2] text-white rounded-xl font-semibold hover:bg-[#1a8cd8] transition"
+        >
+          {/* Twitter icon SVG */}
+          Twitter
+        </button>
+
+        <button
+          onClick={shareOnWhatsApp}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-[#25D366] text-white rounded-xl font-semibold hover:bg-[#20BD5A] transition"
+        >
+          {/* WhatsApp icon SVG */}
+          WhatsApp
+        </button>
+
+        <button
+          onClick={copyToClipboard}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-700 text-white rounded-xl font-semibold hover:bg-gray-600 transition"
+        >
+          {copied ? '¡Copiado!' : 'Copiar link'}
+        </button>
+      </div>
+
+      {navigator.share && (
+        <button
+          onClick={shareNative}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl font-bold hover:shadow-lg transition"
+        >
+          Compartir más...
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+### Usage
+
+```astro
+---
+import ShareButtons from '@/components/ShareButtons.tsx';
+import { getUserRoute } from '@/lib/supabase';
+
+const { shareCode } = Astro.params;
+const { data: route } = await getUserRoute(shareCode);
+---
+
+<ShareButtons
+  client:load
+  shareCode={route.share_code}
+  routeName={route.route_name}
+  ticketUrl={route.ticket_url}
+/>
+```
+
+## MiRutaView.tsx
+
+**Display personalized route** with map and attractions.
+
+### Features
+
+- Shows selected attractions
+- Interactive map (if integrated)
+- Share buttons
+- Download ticket
+- Edit preferences
+
+### Implementation
+
+```tsx
+// src/components/turismo/MiRutaView.tsx
+import { useEffect, useState } from 'react';
+import { getCurrentUser, getLatestUserRoute } from '@/lib/supabase';
+import ShareButtons from '@/components/ShareButtons.tsx';
+
+export default function MiRutaView() {
+  const [route, setRoute] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRoute() {
+      const user = await getCurrentUser();
+      if (!user) {
+        window.location.href = '/turismo?login=1';
+        return;
+      }
+
+      const latestRoute = await getLatestUserRoute(user.id);
+      setRoute(latestRoute);
+      setLoading(false);
+    }
+
+    loadRoute();
+  }, []);
+
+  if (loading) {
+    return <div className="text-center py-20">Cargando tu ruta...</div>;
+  }
+
+  if (!route) {
+    return (
+      <div className="text-center py-20">
+        <p>No tienes rutas aún.</p>
+        <a href="/turismo?onboarding=1">Crear mi primera ruta</a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-4">{route.route_name}</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {route.atractivos.map(slug => (
+          <AtractivoCard key={slug} slug={slug} />
+        ))}
+      </div>
+
+      <ShareButtons
+        shareCode={route.share_code}
+        routeName={route.route_name}
+        ticketUrl={route.ticket_url}
+      />
+    </div>
+  );
+}
+```
+
+## PreferencesEditor.tsx
+
+**Edit saved preferences** without full onboarding flow.
+
+```tsx
+export default function PreferencesEditor() {
+  const [preferences, setPreferences] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    setLoading(true);
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    await saveUserPreferences({
+      user_id: user.id,
+      ...preferences
+    });
+
+    toast.success('Preferencias actualizadas');
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+      {/* Preference inputs */}
+      <button type="submit" disabled={loading}>
+        Guardar cambios
+      </button>
+    </form>
+  );
+}
+```
+
+## Astro Tourism Components
+
+Static components for tourism pages.
+
+### TurismoHeader.astro
+
+Page header with background image:
+
+```astro
+---
+const { title, subtitle, image } = Astro.props;
+---
+
+<header class="relative h-96 overflow-hidden">
+  <img src={image} alt={title} class="absolute inset-0 w-full h-full object-cover" />
+  <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+  <div class="relative z-10 flex items-end h-full p-8">
+    <div>
+      <h1 class="text-5xl font-black text-white mb-2">{title}</h1>
+      <p class="text-xl text-white/90">{subtitle}</p>
+    </div>
+  </div>
+</header>
+```
+
+### RouteCard.astro
+
+Preview card for tourism routes:
+
+```astro
+---
+interface Props {
+  route: {
+    name: string;
+    description: string;
+    duration: string;
+    difficulty: string;
+    image: string;
+  };
+}
+
+const { route } = Astro.props;
+---
+
+<a href={`/turismo/rutas/${route.slug}`} class="group block">
+  <div class="relative overflow-hidden rounded-2xl">
+    <img src={route.image} alt={route.name} class="w-full h-64 object-cover group-hover:scale-110 transition duration-500" />
+    <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+      <h3 class="text-2xl font-bold text-white mb-2">{route.name}</h3>
+      <div class="flex gap-4 text-sm text-white/90">
+        <span>🕒 {route.duration}</span>
+        <span>⛰️ {route.difficulty}</span>
+      </div>
+    </div>
+  </div>
+</a>
+```
+
+## Performance Tips
+
+### 1. Lazy Load Below Fold
+
+```astro
+<TurismoOnboarding client:visible />
+<MiRutaView client:visible />
+```
+
+### 2. Minimize Initial Props
+
+```astro
+<!-- ✅ Good -->
+<FavoriteButton client:load atractivoSlug={slug} />
+
+<!-- ❌ Avoid -->
+<FavoriteButton client:load atractivo={fullObject} />
+```
+
+### 3. Use Optimistic UI
+
+Update UI immediately, sync with server:
+
+```tsx
+const handleToggle = async () => {
+  setIsFav(!isFav);  // Immediate update
+  try {
+    await toggleFavorite(userId, slug);
+  } catch {
+    setIsFav(isFav);  // Revert on error
+  }
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="UI Components" icon="paintbrush" href="/development/components/ui">
+    Header, Footer, and navigation
+  </Card>
+  <Card title="Supabase Integration" icon="database" href="/development/supabase">
+    Database functions used by tourism components
+  </Card>
+  <Card title="Authentication" icon="lock" href="/development/authentication">
+    OAuth flow in TurismoOnboarding
+  </Card>
+  <Card title="Component Overview" icon="puzzle-piece" href="/development/components/overview">
+    Component architecture patterns
+  </Card>
+</CardGroup>

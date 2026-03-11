@@ -1,0 +1,585 @@
+---
+title: Internationalization (i18n)
+description: Multilingual support with Astro's built-in i18n and translation files
+icon: 'language'
+---
+
+## Overview
+
+The platform supports **three languages**:
+- **Spanish (es)** - Default language, no route prefix
+- **English (en)** - Route prefix `/en/*`
+- **Nahuatl (nah-MX)** - Route prefix `/nah-MX/*` for indigenous language support
+
+Configured in `astro.config.mjs` using Astro's native i18n features.
+
+## Configuration
+
+### astro.config.mjs
+
+```javascript
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  i18n: {
+    locales: ["es", "en", "nah-MX"],
+    defaultLocale: "es",
+    routing: {
+      prefixDefaultLocale: false,  // Spanish has no /es/ prefix
+    },
+  },
+  // ...
+});
+```
+
+### Route Structure
+
+| Language | Example URL | Description |
+|----------|-------------|-------------|
+| Spanish (es) | `/turismo` | Default, no prefix |
+| English (en) | `/en/turismo` | English version |
+| Nahuatl (nah-MX) | `/nah-MX/turismo` | Nahuatl version |
+
+## Translation Files
+
+Translation files are organized by feature/page:
+
+```
+src/i18n/
+└── xochitlanis/           # Event-specific translations
+    ├── es.json            # Spanish
+    ├── en.json            # English
+    └── nah-MX.json        # Nahuatl
+```
+
+### Spanish Translation (es.json)
+
+```json
+{
+  "SEO_TITLE": "Revive el Xochitlallis 2026 · Zongolica",
+  "SEO_DESCRIPTION": "Revive los mejores momentos del Xochitlallis 2026 en Zongolica. Galería de fotos, reels y la esencia de esta ceremonia nahua de agradecimiento a la Madre Tierra.",
+  "BACK_TO_PORTAL": "Volver al portal",
+  "HERO_EYEBROW": "Revive Xochitlallis 2026",
+  "HERO_TITLE": "Gracias por ser parte del",
+  "HERO_TITLE_EMPH": "Xochitlallis 2026.",
+  "HERO_LEAD": "El 5 y 6 de marzo Zongolica vibró con la ceremonia nahua milenaria de agradecimiento a la Madre Tierra. Revive los momentos más emotivos a través de nuestra galería y reels.",
+  "STAT_ENTRY_LABEL": "Entrada",
+  "STAT_ENTRY_VALUE": "Libre",
+  "STAT_DATE_LABEL": "Fecha",
+  "STAT_DATE_VALUE": "5 y 6 de marzo",
+  "STAT_VENUE_LABEL": "Sede",
+  "STAT_VENUE_VALUE": "Parque Juan Moctezuma y Cortés",
+  "CTA_PRIMARY": "VER GALERÍA",
+  "CTA_SECONDARY": "Ver reels",
+  "GALLERY_BADGE": "Galería",
+  "GALLERY_TITLE": "Los mejores momentos del Xochitlallis 2026",
+  "GALLERY_BODY": "Una selección de imágenes que capturan la esencia de la ceremonia, las ofrendas, la música y la comunidad."
+}
+```
+
+### English Translation (en.json)
+
+```json
+{
+  "SEO_TITLE": "Relive Xochitlallis 2026 · Zongolica",
+  "SEO_DESCRIPTION": "Relive the best moments of Xochitlallis 2026 in Zongolica. Photo gallery, reels and the essence of this Nahua ceremony of gratitude to Mother Earth.",
+  "BACK_TO_PORTAL": "Back to portal",
+  "HERO_EYEBROW": "Relive Xochitlallis 2026",
+  "HERO_TITLE": "Thank you for being part of",
+  "HERO_TITLE_EMPH": "Xochitlallis 2026.",
+  "HERO_LEAD": "On March 5 and 6, Zongolica vibrated with the ancient Nahua ceremony of gratitude to Mother Earth. Relive the most moving moments through our gallery and reels.",
+  "CTA_PRIMARY": "VIEW GALLERY",
+  "CTA_SECONDARY": "Watch reels",
+  "GALLERY_TITLE": "Best moments of Xochitlallis 2026"
+}
+```
+
+### Nahuatl Translation (nah-MX.json)
+
+```json
+{
+  "SEO_TITLE": "Xochitlallis 2026 · Zongolica",
+  "HERO_TITLE": "Tlazohcamati ipan",
+  "HERO_TITLE_EMPH": "Xochitlallis 2026.",
+  "CTA_PRIMARY": "XIQUITTA",
+  "GALLERY_TITLE": "Xochitlallis 2026 ipan"
+}
+```
+
+<Info>
+**Nahuatl (nah-MX)** preserves the indigenous language of the region, honoring local culture and accessibility.
+</Info>
+
+## Usage in Components
+
+### Astro Components
+
+```astro
+---
+// pages/xochitlanis/index.astro
+import es from '@/i18n/xochitlanis/es.json';
+import en from '@/i18n/xochitlanis/en.json';
+import nahMX from '@/i18n/xochitlanis/nah-MX.json';
+
+// Get current locale from URL
+const locale = Astro.currentLocale || 'es';
+
+// Select translation object
+const translations = {
+  es,
+  en,
+  'nah-MX': nahMX
+};
+
+const t = translations[locale];
+---
+
+<html lang={locale}>
+<head>
+  <title>{t.SEO_TITLE}</title>
+  <meta name="description" content={t.SEO_DESCRIPTION} />
+</head>
+<body>
+  <section>
+    <span class="badge">{t.HERO_EYEBROW}</span>
+    <h1>{t.HERO_TITLE} <em>{t.HERO_TITLE_EMPH}</em></h1>
+    <p>{t.HERO_LEAD}</p>
+    <a href="#gallery">{t.CTA_PRIMARY}</a>
+  </section>
+</body>
+</html>
+```
+
+### Helper Function
+
+Create a translation helper:
+
+```typescript
+// src/lib/i18n.ts
+import esXochitlanis from '@/i18n/xochitlanis/es.json';
+import enXochitlanis from '@/i18n/xochitlanis/en.json';
+import nahMXXochitlanis from '@/i18n/xochitlanis/nah-MX.json';
+
+const translations = {
+  xochitlanis: {
+    es: esXochitlanis,
+    en: enXochitlanis,
+    'nah-MX': nahMXXochitlanis,
+  }
+};
+
+export function useTranslations(
+  namespace: keyof typeof translations,
+  locale: string = 'es'
+) {
+  return translations[namespace][locale] || translations[namespace].es;
+}
+```
+
+**Usage**:
+
+```astro
+---
+import { useTranslations } from '@/lib/i18n';
+
+const t = useTranslations('xochitlanis', Astro.currentLocale);
+---
+
+<h1>{t.HERO_TITLE}</h1>
+```
+
+## Language Switcher Component
+
+### LanguageSwitcher.astro
+
+```astro
+---
+// components/LanguageSwitcher.astro
+import Spain from '@/components/flags/Spain.astro';
+import UnitedStates from '@/components/flags/UnitedStates.astro';
+import Nahuatl from '@/components/flags/Nahuatl.astro';
+
+const currentPath = Astro.url.pathname;
+const currentLocale = Astro.currentLocale || 'es';
+
+// Generate paths for each locale
+function getLocalizedPath(locale: string) {
+  if (locale === 'es') {
+    // Remove any locale prefix
+    return currentPath.replace(/^\/en\//, '/').replace(/^\/nah-MX\//, '/');
+  }
+  // Add locale prefix
+  const cleanPath = currentPath.replace(/^\/en\//, '/').replace(/^\/nah-MX\//, '/');
+  return `/${locale}${cleanPath}`;
+}
+
+const languages = [
+  { code: 'es', name: 'Español', flag: Spain, path: getLocalizedPath('es') },
+  { code: 'en', name: 'English', flag: UnitedStates, path: getLocalizedPath('en') },
+  { code: 'nah-MX', name: 'Náhuatl', flag: Nahuatl, path: getLocalizedPath('nah-MX') },
+];
+---
+
+<div class="language-switcher">
+  {languages.map(lang => (
+    <a
+      href={lang.path}
+      class:list={[
+        'language-option',
+        { active: currentLocale === lang.code }
+      ]}
+      title={lang.name}
+    >
+      <lang.flag class="w-5 h-5" />
+      <span>{lang.name}</span>
+    </a>
+  ))}
+</div>
+
+<style>
+  .language-switcher {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .language-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+  }
+
+  .language-option:hover {
+    background-color: rgba(255, 130, 0, 0.1);
+  }
+
+  .language-option.active {
+    background-color: rgba(255, 130, 0, 0.2);
+    font-weight: 600;
+  }
+</style>
+```
+
+### Usage in Header
+
+```astro
+---
+import LanguageSwitcher from '@/components/LanguageSwitcher.astro';
+---
+
+<header>
+  <nav>
+    <!-- Other nav items -->
+    <LanguageSwitcher />
+  </nav>
+</header>
+```
+
+## Dynamic Routes with i18n
+
+### Static Paths with Locales
+
+```astro
+---
+// pages/turismo/atractivos/[slug].astro
+import { atractivos } from '@/data/turismo/atractivos';
+
+export async function getStaticPaths() {
+  const locales = ['es', 'en', 'nah-MX'];
+  const paths = [];
+
+  for (const locale of locales) {
+    for (const atractivo of atractivos) {
+      paths.push({
+        params: { slug: atractivo.slug },
+        props: { atractivo, locale }
+      });
+    }
+  }
+
+  return paths;
+}
+
+const { atractivo, locale } = Astro.props;
+---
+
+<h1>{atractivo.titulo[locale]}</h1>
+<p>{atractivo.descripcion[locale]}</p>
+```
+
+### Multilingual Content Structure
+
+```typescript
+// data/turismo/atractivos.ts
+export interface Atractivo {
+  slug: string;
+  titulo: {
+    es: string;
+    en: string;
+    'nah-MX': string;
+  };
+  descripcion: {
+    es: string;
+    en: string;
+    'nah-MX': string;
+  };
+  // ...
+}
+
+export const atractivos: Atractivo[] = [
+  {
+    slug: 'cascada-texpico',
+    titulo: {
+      es: 'Cascada de Texpico',
+      en: 'Texpico Waterfall',
+      'nah-MX': 'Texpico Atl'
+    },
+    descripcion: {
+      es: 'Una hermosa cascada rodeada de naturaleza',
+      en: 'A beautiful waterfall surrounded by nature',
+      'nah-MX': 'Ce cualli atl ipan cuauhtla'
+    }
+  }
+];
+```
+
+## SEO with i18n
+
+### Hreflang Tags
+
+```astro
+---
+const currentPath = Astro.url.pathname;
+const baseUrl = 'https://zongolica.gob.mx';
+
+function getAlternateUrl(locale: string) {
+  if (locale === 'es') {
+    return `${baseUrl}${currentPath.replace(/^\/en\//, '/').replace(/^\/nah-MX\//, '/')}`;
+  }
+  const cleanPath = currentPath.replace(/^\/en\//, '/').replace(/^\/nah-MX\//, '/');
+  return `${baseUrl}/${locale}${cleanPath}`;
+}
+---
+
+<head>
+  <link rel="alternate" hreflang="es" href={getAlternateUrl('es')} />
+  <link rel="alternate" hreflang="en" href={getAlternateUrl('en')} />
+  <link rel="alternate" hreflang="nah" href={getAlternateUrl('nah-MX')} />
+  <link rel="alternate" hreflang="x-default" href={getAlternateUrl('es')} />
+</head>
+```
+
+### Language-Specific Meta Tags
+
+```astro
+<html lang={Astro.currentLocale || 'es'}>
+<head>
+  <meta property="og:locale" content={Astro.currentLocale === 'nah-MX' ? 'nah_MX' : Astro.currentLocale === 'en' ? 'en_US' : 'es_MX'} />
+</head>
+```
+
+## Translation Management
+
+### Adding New Translations
+
+1. **Create translation files** for all locales:
+
+```bash
+touch src/i18n/turismo/es.json
+touch src/i18n/turismo/en.json
+touch src/i18n/turismo/nah-MX.json
+```
+
+2. **Add translation keys**:
+
+```json
+// turismo/es.json
+{
+  "PAGE_TITLE": "Descubre Zongolica",
+  "PAGE_DESCRIPTION": "Explora los atractivos turísticos de Zongolica",
+  "CTA_EXPLORE": "Explorar",
+  "CTA_BOOK": "Reservar ahora"
+}
+```
+
+```json
+// turismo/en.json
+{
+  "PAGE_TITLE": "Discover Zongolica",
+  "PAGE_DESCRIPTION": "Explore Zongolica's tourist attractions",
+  "CTA_EXPLORE": "Explore",
+  "CTA_BOOK": "Book now"
+}
+```
+
+3. **Import and use**:
+
+```astro
+---
+import es from '@/i18n/turismo/es.json';
+import en from '@/i18n/turismo/en.json';
+
+const locale = Astro.currentLocale || 'es';
+const t = locale === 'en' ? en : es;
+---
+
+<h1>{t.PAGE_TITLE}</h1>
+```
+
+### Translation Conventions
+
+- **ALL_CAPS** for translation keys (e.g., `HERO_TITLE`, `CTA_PRIMARY`)
+- **Descriptive names** that indicate usage (e.g., `GALLERY_TITLE` not `TITLE_1`)
+- **Group by feature** (e.g., `HERO_*`, `GALLERY_*`, `CTA_*`)
+- **Namespace by page/feature** (separate files for `xochitlanis`, `turismo`, etc.)
+
+## Date & Number Formatting
+
+### Dates
+
+```typescript
+const date = new Date('2026-03-05');
+const locale = Astro.currentLocale || 'es';
+
+const formatted = date.toLocaleDateString(locale, {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+
+// es: "5 de marzo de 2026"
+// en: "March 5, 2026"
+```
+
+### Numbers
+
+```typescript
+const price = 500;
+const locale = Astro.currentLocale || 'es';
+
+const formatted = price.toLocaleString(locale, {
+  style: 'currency',
+  currency: 'MXN'
+});
+
+// es: "$500.00"
+// en: "MX$500.00"
+```
+
+## Accessibility
+
+### Language Attributes
+
+Always set `lang` attribute:
+
+```astro
+<html lang={Astro.currentLocale || 'es'}>
+```
+
+For mixed-language content:
+
+```astro
+<p>The ceremony is called <span lang="nah">Xochitlallis</span>.</p>
+```
+
+### Screen Readers
+
+Provide translations for `aria-label`:
+
+```astro
+---
+const ariaLabels = {
+  es: 'Menú de navegación',
+  en: 'Navigation menu',
+  'nah-MX': 'Nemiliztli'
+};
+---
+
+<nav aria-label={ariaLabels[Astro.currentLocale || 'es']}>
+  <!-- Nav items -->
+</nav>
+```
+
+## React Components with i18n
+
+### Passing Locale as Prop
+
+```astro
+---
+import TurismoOnboarding from '@/components/turismo/TurismoOnboarding.tsx';
+---
+
+<TurismoOnboarding
+  client:load
+  locale={Astro.currentLocale || 'es'}
+/>
+```
+
+### Using Translations in React
+
+```tsx
+// components/turismo/TurismoOnboarding.tsx
+import { useState } from 'react';
+
+interface Props {
+  locale?: string;
+}
+
+export default function TurismoOnboarding({ locale = 'es' }: Props) {
+  const translations = {
+    es: {
+      title: '¿Qué te hace vibrar?',
+      subtitle: 'Elige las experiencias que te llaman',
+      next: 'Siguiente',
+      back: 'Atrás'
+    },
+    en: {
+      title: 'What makes you vibrate?',
+      subtitle: 'Choose the experiences that call you',
+      next: 'Next',
+      back: 'Back'
+    }
+  };
+
+  const t = translations[locale] || translations.es;
+
+  return (
+    <div>
+      <h1>{t.title}</h1>
+      <p>{t.subtitle}</p>
+      <button>{t.next}</button>
+    </div>
+  );
+}
+```
+
+## Performance
+
+### Code Splitting by Locale
+
+Astro automatically splits translation files by route:
+
+- `/turismo` loads only `es.json`
+- `/en/turismo` loads only `en.json`
+- `/nah-MX/turismo` loads only `nah-MX.json`
+
+No overhead from unused translations.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Folder Structure" icon="folder-tree" href="/development/folder-structure">
+    Where translation files live
+  </Card>
+  <Card title="Components Overview" icon="puzzle-piece" href="/development/components/overview">
+    Using translations in components
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    How i18n fits in the system
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    Astro's i18n capabilities
+  </Card>
+</CardGroup>

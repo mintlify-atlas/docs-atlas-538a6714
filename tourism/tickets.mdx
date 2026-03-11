@@ -1,0 +1,410 @@
+---
+title: "Ticket Generation"
+description: "Generate shareable digital tickets with QR codes for tourism routes in Zongolica"
+---
+
+# Ticket Generation System
+
+The ticket generation system creates **shareable digital tickets** for user-created tourism routes. Tickets include route details, QR codes, and social sharing capabilities.
+
+<Note>
+  Tickets are generated via `/api/turismo/ticket.ts` and stored in WordPress as custom post types.
+</Note>
+
+## Ticket Architecture
+
+```mermaid
+graph LR
+    A[User Creates Route] --> B[Generate Share Code]
+    B --> C[POST /api/turismo/ticket]
+    C --> D[Save to WordPress]
+    D --> E[Return Ticket URL]
+    E --> F[/turismo/ticket/CODE]
+    F --> G[QR Code + Social Share]
+```
+
+## Share Code Generation
+
+Unique 10-character codes are generated using `nanoid`:
+
+```typescript src/lib/generateTicket.ts
+import { nanoid } from 'nanoid';
+
+// Generate unique 10-character code for sharing routes
+export function generateShareCode(): string {
+  return nanoid(10);
+}
+```
+
+### Example Share Codes
+
+- `V1StGXR8_Z`
+- `3z4xS9yK1n`
+- `mT8qW2rL5p`
+
+<Warning>
+  Share codes are **case-sensitive** and must be exactly 10 characters.
+</Warning>
+
+## API Endpoint: Create Ticket
+
+### POST /api/turismo/ticket
+
+Creates a new ticket and stores it in WordPress.
+
+```typescript src/pages/api/turismo/ticket.ts
+export const POST: APIRoute = async ({ request }) => {
+  const { name, email, phone, shareCode } = await request.json();
+
+  if (!name || !email || !shareCode) {
+    return jsonResponse({ error: 'Missing required fields' }, 400);
+  }
+
+  const ticketData = {
+    shareCode,
+    name,
+    email,
+    phone: phone ?? '',
+    routeName: 'Ruta Zongolica',
+    atractivos: [],
+    badges: [],
+    createdAt: new Date().toISOString(),
+  };
+
+  // Save to WordPress custom post type
+  const wpRes = await fetch(WP_TICKETS_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: getAuthHeader(),
+    },
+    body: JSON.stringify({
+      title: `Ticket ${name}`,
+      status: 'publish',
+      slug: shareCode,
+      content: JSON.stringify(ticketData),
+    }),
+  });
+
+  const ticketUrl = `/ruta/${shareCode}`;
+  return jsonResponse({ ticketUrl, shareCode });
+};
+```
+
+### Request Body
+
+```json
+{
+  "name": "Juan Pérez",
+  "email": "juan@example.com",
+  "phone": "2721234567",
+  "shareCode": "V1StGXR8_Z"
+}
+```
+
+### Response
+
+```json
+{
+  "ticketUrl": "/ruta/V1StGXR8_Z",
+  "shareCode": "V1StGXR8_Z",
+  "wpId": 12345
+}
+```
+
+## WordPress Integration
+
+Tickets are stored as WordPress custom post types using Application Passwords for authentication:
+
+### Environment Variables
+
+```bash .env
+WP_BASE_URL=https://zongolica.mx
+WP_TICKETS_ENDPOINT=https://zongolica.mx/wp-json/wp/v2/turismo_ticket
+WP_APP_USER=your-wp-username
+WP_APP_PASSWORD=your-app-password
+```
+
+### Authentication
+
+```typescript src/pages/api/turismo/ticket.ts
+function getAuthHeader() {
+  if (!WP_APP_USER || !WP_APP_PASSWORD) return null;
+  const token = Buffer.from(`${WP_APP_USER}:${WP_APP_PASSWORD}`).toString('base64');
+  return `Basic ${token}`;
+}
+```
+
+<Note>
+  WordPress Application Passwords provide secure API access without exposing user credentials.
+</Note>
+
+## Ticket Data Structure
+
+```typescript
+interface TicketData {
+  shareCode: string;        // Unique 10-char code
+  name: string;             // User name
+  email: string;            // User email
+  phone: string;            // Optional phone
+  routeName: string;        // Route title
+  atractivos: string[];     // Attraction slugs
+  badges: string[];         // Badge IDs
+  createdAt: string;        // ISO timestamp
+}
+```
+
+## Saving Routes to Database
+
+Routes are saved to Supabase before generating tickets:
+
+```typescript src/lib/supabase.ts
+export interface UserRoute {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  route_name: string;
+  atractivos: string[];     // Array of attraction slugs
+  ticket_url: string;       // Generated ticket URL
+  share_code: string;       // Unique share code
+  badges: string[];         // Badge IDs
+  created_at: string;
+}
+
+export async function saveUserRoute(route: Omit<UserRoute, 'id' | 'created_at'>) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .insert([route])
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+## Retrieving Routes
+
+### Get Route by Share Code
+
+```typescript src/lib/supabase.ts
+export async function getUserRoute(shareCode: string) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .select('*, user:user_id(*)')
+    .eq('share_code', shareCode)
+    .single();
+  return { data, error };
+}
+```
+
+### Get All User Routes
+
+```typescript src/lib/supabase.ts
+export async function getUserRoutes(userId: string) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  return { data, error };
+}
+```
+
+### Get Latest Route
+
+```typescript src/lib/supabase.ts
+export async function getLatestUserRoute(userId: string) {
+  const { data, error } = await supabase
+    .from('user_routes')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  return data;
+}
+```
+
+## Ticket Page: /turismo/ticket/[code].astro
+
+The ticket page displays the route details with QR code:
+
+```astro src/pages/turismo/ticket/[code].astro
+---
+import { getUserRoute } from '@/lib/supabase';
+
+const { code } = Astro.params;
+const { data: route } = await getUserRoute(code);
+
+if (!route) {
+  return Astro.redirect('/404');
+}
+
+const ticketUrl = `${Astro.url.origin}/turismo/ticket/${code}`;
+---
+
+<div class="ticket-container">
+  <h1>{route.route_name}</h1>
+  <p>Creado por: {route.user_name}</p>
+  
+  <!-- QR Code -->
+  <div class="qr-code">
+    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${ticketUrl}`} />
+  </div>
+  
+  <!-- Attractions -->
+  <div class="attractions">
+    {route.atractivos.map(slug => (
+      <AttractionCard slug={slug} />
+    ))}
+  </div>
+  
+  <!-- Share Buttons -->
+  <ShareButtons url={ticketUrl} />
+</div>
+```
+
+## QR Code Generation
+
+QR codes are generated using the QR Server API:
+
+```typescript
+const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${ticketUrl}`;
+```
+
+### QR Code Options
+
+- **size**: `300x300` (adjustable)
+- **data**: Full ticket URL
+- **format**: PNG (default)
+- **ecc**: Error correction level (L, M, Q, H)
+
+<Note>
+  QR codes link directly to the ticket page, allowing easy sharing and scanning at attractions.
+</Note>
+
+## Social Sharing
+
+Tickets include social sharing buttons:
+
+```typescript
+const shareData = {
+  title: route.route_name,
+  text: `Mira mi ruta turística en Zongolica`,
+  url: ticketUrl,
+};
+
+// Web Share API
+if (navigator.share) {
+  navigator.share(shareData);
+} else {
+  // Fallback to copy link
+  navigator.clipboard.writeText(ticketUrl);
+}
+```
+
+### Share Platforms
+
+<CardGroup cols={2}>
+  <Card title="WhatsApp" icon="whatsapp">
+    Share via WhatsApp with pre-filled message
+  </Card>
+  <Card title="Facebook" icon="facebook">
+    Post ticket to Facebook timeline
+  </Card>
+  <Card title="Twitter" icon="twitter">
+    Tweet with route details and link
+  </Card>
+  <Card title="Copy Link" icon="link">
+    Copy ticket URL to clipboard
+  </Card>
+</CardGroup>
+
+## Complete Flow Example
+
+```typescript
+// 1. User creates route with 3 attractions
+const attractions = [
+  'cascada-atlahuitzia',
+  'parroquia-san-francisco-de-asis',
+  'cristo-rey'
+];
+
+// 2. Generate share code
+const shareCode = generateShareCode(); // "V1StGXR8_Z"
+
+// 3. Save route to Supabase
+const route = {
+  user_id: currentUser.id,
+  user_name: currentUser.name,
+  route_name: 'Mi Ruta Perfecta',
+  atractivos: attractions,
+  ticket_url: `/ruta/${shareCode}`,
+  share_code: shareCode,
+  badges: ['primera_ruta'],
+};
+await saveUserRoute(route);
+
+// 4. Create ticket in WordPress
+const response = await fetch('/api/turismo/ticket', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: currentUser.name,
+    email: currentUser.email,
+    shareCode,
+  }),
+});
+
+const { ticketUrl } = await response.json();
+// ticketUrl: "/ruta/V1StGXR8_Z"
+
+// 5. Redirect to ticket page
+window.location.href = ticketUrl;
+```
+
+## Error Handling
+
+```typescript src/pages/api/turismo/ticket.ts
+if (!WP_BASE_URL || !WP_TICKETS_ENDPOINT) {
+  return jsonResponse({ error: 'WP_BASE_URL not configured' }, 500);
+}
+
+if (!authHeader) {
+  return jsonResponse({ error: 'WP credentials not configured' }, 500);
+}
+
+if (!name || !email || !shareCode) {
+  return jsonResponse({ error: 'Missing required fields' }, 400);
+}
+
+if (!wpRes.ok) {
+  const text = await wpRes.text();
+  return jsonResponse({ error: 'WP error', details: text }, 500);
+}
+```
+
+## Security Considerations
+
+<Warning>
+  - Share codes are **public** but unguessable (10-char random)
+  - No sensitive data stored in tickets
+  - WordPress credentials via environment variables only
+  - HTTPS required for production
+</Warning>
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Routes" icon="route" href="/tourism/routes">
+    User-created routes and sharing
+  </Card>
+  <Card title="Badges" icon="award" href="/tourism/badges">
+    Badge system and unlocking
+  </Card>
+  <Card title="Attractions" icon="map" href="/tourism/attractions">
+    All 17 tourist attractions
+  </Card>
+  <Card title="Recommendations" icon="sparkles" href="/tourism/recommendations">
+    AI-powered recommendations
+  </Card>
+</CardGroup>

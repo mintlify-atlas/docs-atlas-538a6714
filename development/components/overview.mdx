@@ -1,0 +1,672 @@
+---
+title: Component Overview
+description: Component architecture, patterns, and organization
+icon: 'puzzle-piece'
+---
+
+## Component Types
+
+The platform uses two types of components:
+
+### Astro Components (`.astro`)
+
+**Server-rendered HTML components** with optional JavaScript.
+
+- Rendered once at build/request time
+- No JavaScript shipped to client by default
+- Perfect for static content
+- Can import and embed React components
+
+**Example**:
+
+```astro
+---
+// components/Hero.astro
+const { title, subtitle } = Astro.props;
+---
+
+<section class="hero">
+  <h1>{title}</h1>
+  <p>{subtitle}</p>
+</section>
+
+<style>
+  .hero {
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+</style>
+```
+
+### React Components (`.tsx`)
+
+**Client-side interactive components** using React 19.
+
+- Full React features (hooks, state, effects)
+- Hydrated on client based on directive
+- Used for interactive UI (forms, modals, real-time data)
+- TypeScript for type safety
+
+**Example**:
+
+```tsx
+// components/AuthButtons.tsx
+import { useState } from 'react';
+
+export default function AuthButtons() {
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <button
+      onClick={() => setLoading(true)}
+      className="px-4 py-2 bg-orange-500 text-white rounded"
+    >
+      {loading ? 'Loading...' : 'Sign In'}
+    </button>
+  );
+}
+```
+
+## Client Directives
+
+**Control when React components hydrate** on the client.
+
+### `client:load`
+
+**Hydrate immediately** on page load.
+
+```astro
+<AuthButtons client:load />
+```
+
+Use for:
+- Authentication UI (needs to check session immediately)
+- Critical interactive elements above the fold
+
+### `client:idle`
+
+**Hydrate when browser is idle** (after initial page load).
+
+```astro
+<ChatNachito client:idle />
+```
+
+Use for:
+- Non-critical interactive elements
+- Chatbots, help widgets
+- Analytics components
+
+### `client:visible`
+
+**Hydrate when component enters viewport**.
+
+```astro
+<TurismoOnboarding client:visible />
+```
+
+Use for:
+- Below-the-fold interactive content
+- Image galleries, carousels
+- Lazy-loaded features
+
+### `client:media`
+
+**Hydrate based on media query**.
+
+```astro
+<MobileNav client:media="(max-width: 768px)" />
+```
+
+Use for:
+- Mobile-only components
+- Responsive interactive features
+
+### `client:only`
+
+**Skip server rendering**, only render on client.
+
+```astro
+<ThreeJsScene client:only="react" />
+```
+
+Use for:
+- Components that depend on browser APIs
+- Libraries that don't support SSR
+
+## Component Organization
+
+```
+components/
+├── Header.tsx              # Site-wide components
+├── Footer.astro
+├── AuthButtons.tsx
+├── ShareButtons.tsx
+│
+├── turismo/                # Feature-specific
+│   ├── TurismoOnboarding.tsx
+│   ├── TurismoHeader.astro
+│   ├── FavoriteButton.tsx
+│   └── RouteCard.astro
+│
+├── ui/                     # Reusable UI primitives
+│   ├── resizable-navbar.tsx
+│   ├── Gallery.astro
+│   └── SileoToaster.tsx
+│
+└── xochitlanis/            # Event-specific
+    ├── Hero.astro
+    ├── CountDown.astro
+    └── FAQ.astro
+```
+
+### Naming Conventions
+
+- **PascalCase** for all components (e.g., `TurismoOnboarding.tsx`)
+- **Descriptive names** (e.g., `AuthButtons` not `Buttons`)
+- **Feature prefixes** for clarity (e.g., `TurismoHeader` not `Header2`)
+
+## Styling Patterns
+
+### Tailwind CSS Classes
+
+**Utility-first approach** with Tailwind CSS 4.x.
+
+```astro
+<button class="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl font-bold hover:shadow-lg transition transform hover:-translate-y-0.5">
+  Click me
+</button>
+```
+
+### Scoped Styles (Astro)
+
+**Component-scoped CSS** in Astro components:
+
+```astro
+<div class="card">
+  <h2>Title</h2>
+</div>
+
+<style>
+  .card {
+    padding: 2rem;
+    border-radius: 1rem;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  h2 {
+    color: #ff8200;  /* Scoped to this component only */
+  }
+</style>
+```
+
+### Dynamic Classes
+
+**Conditional classes** with `class:list`:
+
+```astro
+<div class:list={[
+  'base-class',
+  { 'active': isActive },
+  { 'disabled': isDisabled },
+  customClass
+]}>
+  Content
+</div>
+```
+
+**In React** with `clsx` or `className`:
+
+```tsx
+import clsx from 'clsx';
+
+<button
+  className={clsx(
+    'px-4 py-2 rounded',
+    loading && 'opacity-50 cursor-not-allowed',
+    variant === 'primary' ? 'bg-orange-500 text-white' : 'bg-gray-200'
+  )}
+>
+  {children}
+</button>
+```
+
+## Props & Types
+
+### Astro Component Props
+
+```astro
+---
+// components/AtractivoCard.astro
+import type { Atractivo } from '@/data/turismo/atractivos';
+
+interface Props {
+  item: Atractivo;
+  size?: 'sm' | 'md' | 'lg';
+  class?: string;
+}
+
+const { item, size = 'md', class: className } = Astro.props;
+---
+
+<a href={`/turismo/atractivos/${item.slug}`} class={className}>
+  <img src={item.imagen} alt={item.titulo} />
+  <h3>{item.titulo}</h3>
+</a>
+```
+
+### React Component Props
+
+```tsx
+// components/AuthButtons.tsx
+interface AuthButtonsProps {
+  onAuthSuccess?: () => void;
+}
+
+export default function AuthButtons({ onAuthSuccess }: AuthButtonsProps) {
+  // ...
+}
+```
+
+### TypeScript Interfaces
+
+```typescript
+// types/turismo.ts
+export interface Atractivo {
+  slug: string;
+  titulo: string;
+  categoria: 'Naturaleza' | 'Cultura' | 'Aventura' | 'Gastronomía';
+  imagen: string;
+  ubicacion: {
+    lat: number;
+    lng: number;
+  };
+}
+```
+
+## Passing Data Between Components
+
+### Parent to Child (Props)
+
+```astro
+---
+import AtractivoCard from '@/components/AtractivoCard.astro';
+import { atractivos } from '@/data/turismo/atractivos';
+---
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  {atractivos.map(item => (
+    <AtractivoCard item={item} size="md" />
+  ))}
+</div>
+```
+
+### React to React (State Lifting)
+
+```tsx
+// Parent component
+function TurismoFlow() {
+  const [step, setStep] = useState(1);
+  const [preferences, setPreferences] = useState({});
+
+  return (
+    <>
+      <StepIndicator currentStep={step} />
+      <PreferenceForm
+        preferences={preferences}
+        onUpdate={setPreferences}
+        onNext={() => setStep(step + 1)}
+      />
+    </>
+  );
+}
+```
+
+### Astro to React (Props)
+
+```astro
+---
+import TurismoOnboarding from '@/components/turismo/TurismoOnboarding.tsx';
+import { getCurrentUser } from '@/lib/supabase';
+
+const user = await getCurrentUser();
+---
+
+<TurismoOnboarding
+  client:load
+  userId={user?.id}
+  userName={user?.user_metadata?.name}
+/>
+```
+
+## Slots
+
+### Astro Slots
+
+**Pass content into components**:
+
+```astro
+---
+// components/Card.astro
+const { title } = Astro.props;
+---
+
+<div class="card">
+  <h2>{title}</h2>
+  <slot />  <!-- Default slot -->
+  <footer>
+    <slot name="footer" />  <!-- Named slot -->
+  </footer>
+</div>
+```
+
+**Usage**:
+
+```astro
+<Card title="Welcome">
+  <p>This goes in the default slot</p>
+  <div slot="footer">
+    <button>Learn More</button>
+  </div>
+</Card>
+```
+
+### React Children
+
+```tsx
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+}
+
+function Card({ title, children }: CardProps) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+}
+```
+
+## Event Handling
+
+### React Events
+
+```tsx
+export default function SearchBar() {
+  const [query, setQuery] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Search:', query);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar..."
+      />
+      <button type="submit">Buscar</button>
+    </form>
+  );
+}
+```
+
+### Astro Script Tags
+
+**Client-side JavaScript** in Astro components:
+
+```astro
+<button id="toggle">Toggle</button>
+<div id="content" style="display: none;">Hidden content</div>
+
+<script>
+  const toggle = document.getElementById('toggle');
+  const content = document.getElementById('content');
+
+  toggle?.addEventListener('click', () => {
+    if (content) {
+      content.style.display = content.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+</script>
+```
+
+<Warning>
+Astro `<script>` tags run once per page. For component-specific logic, use React components with `client:*` directives.
+</Warning>
+
+## Fetching Data
+
+### Server-Side (Astro)
+
+```astro
+---
+import { supabase } from '@/lib/supabase';
+
+const { data: routes } = await supabase
+  .from('user_routes')
+  .select('*')
+  .order('created_at', { ascending: false })
+  .limit(5);
+---
+
+<ul>
+  {routes?.map(route => (
+    <li>{route.route_name}</li>
+  ))}
+</ul>
+```
+
+### Client-Side (React)
+
+```tsx
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+export default function RecentRoutes() {
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchRoutes() {
+      const { data } = await supabase
+        .from('user_routes')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      setRoutes(data || []);
+      setLoading(false);
+    }
+
+    fetchRoutes();
+  }, []);
+
+  if (loading) return <div>Cargando...</div>;
+
+  return (
+    <ul>
+      {routes.map(route => (
+        <li key={route.id}>{route.route_name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Performance Best Practices
+
+### 1. Use Astro Components by Default
+
+**Only use React when you need interactivity**:
+
+```astro
+<!-- ✅ Good: Static card, use Astro -->
+<AtractivoCard item={item} />
+
+<!-- ❌ Avoid: Unnecessary React for static content -->
+<AtractivoCardReact client:load item={item} />
+```
+
+### 2. Choose the Right Directive
+
+```astro
+<!-- ✅ Good: Lazy load below-fold content -->
+<TurismoOnboarding client:visible />
+
+<!-- ❌ Avoid: Eager load everything -->
+<TurismoOnboarding client:load />
+```
+
+### 3. Minimize Props to React Components
+
+```astro
+<!-- ✅ Good: Pass only what's needed -->
+<FavoriteButton client:load atractivoSlug={item.slug} />
+
+<!-- ❌ Avoid: Passing entire objects (serialization overhead) -->
+<FavoriteButton client:load atractivo={item} allAtractivos={atractivos} />
+```
+
+### 4. Use CSS for Animations
+
+```css
+/* ✅ Good: CSS transitions */
+.button {
+  transition: transform 0.2s;
+}
+.button:hover {
+  transform: translateY(-2px);
+}
+```
+
+```tsx
+// ❌ Avoid: JavaScript animations for simple effects
+function Button() {
+  const [y, setY] = useState(0);
+  return <button style={{ transform: `translateY(${y}px)` }}>...</button>
+}
+```
+
+## Component Composition
+
+### Layout Components
+
+```astro
+---
+// layouts/BaseLayout.astro
+import Header from '@/components/Header.tsx';
+import Footer from '@/components/Footer.astro';
+
+const { title, description } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>{title}</title>
+  <meta name="description" content={description} />
+</head>
+<body>
+  <Header client:load />
+  <main>
+    <slot />  <!-- Page content -->
+  </main>
+  <Footer />
+</body>
+</html>
+```
+
+**Usage**:
+
+```astro
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Turismo" description="Descubre Zongolica">
+  <h1>Bienvenido</h1>
+  <p>Contenido de la página</p>
+</BaseLayout>
+```
+
+### Compound Components
+
+```astro
+---
+// components/ui/Card.astro
+---
+<div class="card">
+  <slot />
+</div>
+
+---
+// components/ui/CardHeader.astro
+---
+<header class="card-header">
+  <slot />
+</header>
+
+---
+// components/ui/CardBody.astro
+---
+<div class="card-body">
+  <slot />
+</div>
+```
+
+**Usage**:
+
+```astro
+<Card>
+  <CardHeader>
+    <h2>Cascada de Texpico</h2>
+  </CardHeader>
+  <CardBody>
+    <p>Una hermosa cascada...</p>
+  </CardBody>
+</Card>
+```
+
+## Testing Components
+
+### Visual Testing
+
+```bash
+npm run dev
+# Navigate to http://localhost:4321
+```
+
+### E2E Testing with Playwright
+
+```typescript
+// tests/components.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('AuthButtons shows login form', async ({ page }) => {
+  await page.goto('/turismo');
+  await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tourism Components" icon="map" href="/development/components/tourism">
+    TurismoOnboarding, FavoriteButton, and more
+  </Card>
+  <Card title="UI Components" icon="paintbrush" href="/development/components/ui">
+    Header, Footer, and reusable UI
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    React, Astro, and libraries
+  </Card>
+  <Card title="Folder Structure" icon="folder-tree" href="/development/folder-structure">
+    Where components live
+  </Card>
+</CardGroup>

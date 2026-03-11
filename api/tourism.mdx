@@ -1,0 +1,399 @@
+---
+title: 'Tourism API'
+description: 'Generate tickets, verify visits, rate experiences, and create social sharing images'
+icon: 'ticket'
+---
+
+## Overview
+
+The Tourism API provides endpoints for managing tourist experiences in Zongolica:
+
+- Generate tourism tickets with unique share codes
+- Verify visits with guide codes
+- Rate tourism experiences
+- Generate Open Graph images for social sharing
+
+## Generate Tourism Ticket
+
+<Note>
+This endpoint creates a ticket in WordPress and returns a unique share code and ticket URL.
+</Note>
+
+### Endpoint
+
+```
+POST /api/turismo/ticket
+```
+
+### Authentication
+
+No authentication required (public endpoint).
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Full name of the visitor
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Email address of the visitor
+</ParamField>
+
+<ParamField body="shareCode" type="string" required>
+  Unique share code for the ticket (generated client-side)
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Phone number of the visitor (optional)
+</ParamField>
+
+### Response
+
+<ResponseField name="ticketUrl" type="string">
+  Full URL to the ticket page
+</ResponseField>
+
+<ResponseField name="shareCode" type="string">
+  The share code for the ticket
+</ResponseField>
+
+<ResponseField name="wpId" type="number">
+  WordPress post ID of the created ticket
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://zongolica.gob.mx/api/turismo/ticket \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "phone": "2721234567",
+    "shareCode": "ABCD1234"
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "ticketUrl": "https://zongolica.gob.mx/ruta/ABCD1234",
+  "shareCode": "ABCD1234",
+  "wpId": 12345
+}
+```
+
+### Error Responses
+
+<Expandable title="400 Bad Request">
+```json
+{
+  "error": "Faltan campos requeridos"
+}
+```
+Returned when name, email, or shareCode is missing.
+</Expandable>
+
+<Expandable title="500 Internal Server Error">
+```json
+{
+  "error": "WP_BASE_URL o WP_TICKETS_ENDPOINT no configurado"
+}
+```
+Returned when WordPress credentials are not configured.
+</Expandable>
+
+---
+
+## Verify Visit
+
+<Note>
+This endpoint verifies a visit using a guide code and unlocks badges. Requires authentication.
+</Note>
+
+### Endpoint
+
+```
+POST /api/turismo/verify-visit
+```
+
+### Authentication
+
+Required. Include access token in the Authorization header:
+
+```
+Authorization: Bearer <access_token>
+```
+
+### Request Body
+
+<ParamField body="code" type="string" required>
+  Guide code provided at the tourist attraction (case-insensitive)
+</ParamField>
+
+<ParamField body="userId" type="string" required>
+  UUID of the authenticated user
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Whether the visit was successfully verified
+</ResponseField>
+
+<ResponseField name="visitId" type="string">
+  UUID of the created visit record
+</ResponseField>
+
+<ResponseField name="atractivo" type="string">
+  Slug of the tourist attraction visited
+</ResponseField>
+
+<ResponseField name="badge" type="object">
+  Badge information (null if no badge unlocked)
+  
+  <Expandable title="Badge Properties">
+    <ResponseField name="badge.id" type="string">
+      Badge type identifier
+    </ResponseField>
+    
+    <ResponseField name="badge.name" type="string">
+      Display name of the badge
+    </ResponseField>
+    
+    <ResponseField name="badge.icon" type="string">
+      Emoji icon for the badge
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+```typescript
+const { data: { session } } = await supabase.auth.getSession();
+
+const response = await fetch('/api/turismo/verify-visit', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${session.access_token}`
+  },
+  body: JSON.stringify({
+    code: 'CASCADA123',
+    userId: session.user.id
+  })
+});
+
+const data = await response.json();
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "visitId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "atractivo": "cascada-atlahuitzia",
+  "badge": {
+    "id": "visit_atlahuitzia",
+    "name": "Cascada Atlahuitzía",
+    "icon": "💧"
+  }
+}
+```
+
+### Milestone Badges
+
+The endpoint automatically checks for milestone badges:
+
+- **5 visits** → Explorador badge
+- **10 visits** → Veterano badge
+- **17 visits** → Leyenda badge (all attractions)
+
+### Error Responses
+
+<Expandable title="401 Unauthorized">
+```json
+{
+  "error": "No autenticado"
+}
+```
+Returned when Authorization header is missing or invalid.
+</Expandable>
+
+<Expandable title="404 Not Found">
+```json
+{
+  "error": "Código inválido o no encontrado"
+}
+```
+Returned when the guide code doesn't exist in the database.
+</Expandable>
+
+<Expandable title="400 Bad Request">
+```json
+{
+  "error": "Este código ha expirado"
+}
+```
+or
+```json
+{
+  "error": "Ya has verificado esta visita"
+}
+```
+Returned when the code is expired or already used by the user.
+</Expandable>
+
+---
+
+## Rate Visit
+
+<Note>
+This endpoint allows users to rate and leave notes about their verified visits.
+</Note>
+
+### Endpoint
+
+```
+POST /api/turismo/rate-visit
+```
+
+### Authentication
+
+Required. Include access token in the Authorization header.
+
+### Request Body
+
+<ParamField body="userId" type="string" required>
+  UUID of the authenticated user
+</ParamField>
+
+<ParamField body="atractivoSlug" type="string" required>
+  Slug of the tourist attraction (e.g., "cascada-atlahuitzia")
+</ParamField>
+
+<ParamField body="rating" type="number">
+  Rating from 1 to 5 (optional, null to skip)
+</ParamField>
+
+<ParamField body="notes" type="string">
+  User notes about the experience (optional)
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Whether the rating was successfully saved
+</ResponseField>
+
+<ResponseField name="rating" type="number" nullable>
+  The saved rating (null if not provided or invalid)
+</ResponseField>
+
+<ResponseField name="notes" type="string" nullable>
+  The saved notes (null if not provided)
+</ResponseField>
+
+### Example Request
+
+```typescript
+const response = await fetch('/api/turismo/rate-visit', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${accessToken}`
+  },
+  body: JSON.stringify({
+    userId: user.id,
+    atractivoSlug: 'cascada-atlahuitzia',
+    rating: 5,
+    notes: 'Experiencia inolvidable, la cascada es impresionante'
+  })
+});
+```
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "rating": 5,
+  "notes": "Experiencia inolvidable, la cascada es impresionante"
+}
+```
+
+---
+
+## Generate OG Image
+
+<Note>
+This endpoint generates Open Graph images for social sharing of tourism tickets.
+</Note>
+
+### Endpoint
+
+```
+GET /api/turismo/og/[code]
+```
+
+### Parameters
+
+<ParamField path="code" type="string" required>
+  Share code of the user route
+</ParamField>
+
+### Response
+
+Returns a PNG image (1200x630 pixels) with:
+
+- User name
+- Number of places visited
+- Number of badges earned
+- Completion percentage (out of 17 attractions)
+- Zongolica branding
+
+### Example Usage
+
+```html
+<!-- Meta tags for social sharing -->
+<meta property="og:image" content="https://zongolica.gob.mx/api/turismo/og/ABCD1234" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://zongolica.gob.mx/api/turismo/og/ABCD1234" />
+```
+
+### Cache Headers
+
+Images are cached for 24 hours:
+
+```
+Cache-Control: public, max-age=86400, s-maxage=86400
+```
+
+### Error Responses
+
+<Expandable title="400 Bad Request">
+```
+Código no proporcionado
+```
+Returned when the code parameter is missing.
+</Expandable>
+
+<Expandable title="404 Not Found">
+```
+Ticket no encontrado
+```
+Returned when the share code doesn't exist in the database.
+</Expandable>
+
+---
+
+## Data Types
+
+For detailed type definitions, see:
+
+- [Tourism Data Types](/api/types/tourism)
+- [User Data Types](/api/types/user)

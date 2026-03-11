@@ -1,0 +1,274 @@
+---
+title: "Xochitlanis Tourism Platform"
+description: "Premium landing page for the Zongolica tourism experience"
+---
+
+## Overview
+
+Xochitlanis is the premium tourism landing page for Zongolica, designed with a minimalist and elegant aesthetic inspired by modern SaaS products. It serves as the main entry point for tourists to discover experiences, plan routes, and connect with the destination.
+
+## Design Philosophy
+
+The Xochitlanis platform follows these design principles:
+
+### Minimalism
+- **Spacious layouts**: Ample whitespace for content to breathe
+- **Focused content**: Each section has a clear purpose
+- **Clean typography**: Inter font family (700 for headings, 400 for body)
+
+### Strong Typography
+- **Large headings**: 48px-38px-30px-24px scale
+- **Bold titles**: Font weight 700 for emphasis
+- **Clear hierarchy**: Semantic HTML with proper heading levels
+
+### Microanimations
+- **Scroll reveals**: Content fades in as you scroll
+- **Hover effects**: Cards lift and show shadow on hover
+- **Smooth transitions**: 300ms duration for all interactions
+
+## Page Sections
+
+### 1. Hero Section
+
+```tsx
+<Hero
+  title="Xochitlanis te espera"
+  subtitle="Descubre la magia de la Sierra de Zongolica a través de experiencias auténticas, rutas personalizadas y momentos únicos en comunidades nahuas."
+  primaryCTA="Explorar experiencias"
+  secondaryCTA="Ver mapa interactivo"
+/>
+```
+
+Features:
+- Dark background (gray-900) with orange gradient overlay
+- Large title typography (text-5xl to text-8xl)
+- Two call-to-action buttons
+- Quick access category chips
+
+### 2. About Xochitlanis
+
+Two-column grid with:
+- **Left column**: Description of the tourism initiative
+- **Right column**: Key metrics
+  - 25+ unique experiences
+  - 12 curated routes
+  - 8 Náhuatl communities
+
+### 3. Featured Experiences
+
+Grid of 6 highlighted experiences:
+
+<CardGroup cols={3}>
+  <Card title="Cascada de Atlahuitzia" icon="water">
+    Waterfall experience in the Sierra canyon
+  </Card>
+  <Card title="Artesanías Locales" icon="palette">
+    Local handicraft workshops
+  </Card>
+  <Card title="Café de Altura" icon="mug-hot">
+    High-altitude coffee tasting tours
+  </Card>
+</CardGroup>
+
+Each card includes:
+- Category badge
+- Title and description
+- Difficulty and duration metadata
+- View details link with arrow animation
+
+### 4. Recommended Routes
+
+Three types of routes:
+
+1. **Ruta Corta** (2-3 hours): Quick nature getaway
+2. **Ruta de Día Completo** (6-8 hours): Full cultural immersion
+3. **Ruta Familiar** (4-5 hours): Family-friendly with easy access
+
+Each route card shows:
+- Duration estimate
+- Difficulty level
+- Distance covered
+- Key attraction count
+- Interactive map preview
+
+### 5. Events Calendar
+
+Timeline-style event cards with:
+- Event date (highlighted)
+- Event name and description
+- Location information
+- Category tag (Cultural, Gastronómico, Natural)
+
+### 6. Visitor Services
+
+Grid of essential services:
+
+<CardGroup cols={3}>
+  <Card title="Cómo llegar" icon="route">
+    Transportation options and directions
+  </Card>
+  <Card title="Emergencias" icon="phone">
+    Emergency contacts (911, local authorities)
+  </Card>
+  <Card title="Clima" icon="cloud-sun">
+    Weather forecast and best visiting times
+  </Card>
+  <Card title="Transporte local" icon="bus">
+    Local transportation within the region
+  </Card>
+  <Card title="Hospedaje" icon="bed">
+    Lodging options and recommendations
+  </Card>
+  <Card title="Mapas" icon="map">
+    Downloadable maps and guides
+  </Card>
+</CardGroup>
+
+### 7. Final Call-to-Action
+
+Gradient background section with:
+- Orange gradient (from-orange-500 to-amber-600)
+- Grid pattern overlay for depth
+- Two action buttons:
+  - **Planear mi visita**: Opens route planner
+  - **Contactar guía**: Connects with local guides
+
+## Color System
+
+```css
+/* Primary Brand Color */
+--primary: #ff8200; /* Orange from municipal branding */
+
+/* Secondary Colors */
+--amber: #f59e0b;
+--gray-900: #111827;
+--gray-50: #f9fafb;
+
+/* Accent Colors for Categories */
+--nature: #22c55e;   /* Green */
+--culture: #8b5cf6;  /* Purple */
+--food: #f97316;     /* Orange */
+--adventure: #0ea5e9; /* Blue */
+```
+
+## Components
+
+### ExperienceCard
+
+Reusable card component for experiences:
+
+```tsx
+<ExperienceCard
+  id="exp-1"
+  titulo="Cascada de Atlahuitzia"
+  categoria="Naturaleza"
+  descripcionCorta="Waterfall adventure with scenic canyon views"
+  duracion="2-3 horas"
+  nivel="Moderado"
+  imagen="/images/cascada.jpg"
+/>
+```
+
+### RouteCard
+
+Card component for tourism routes:
+
+```tsx
+<RouteCard
+  nombre="Ruta de Día Completo"
+  descripcion="Immersive cultural experience"
+  duracion="6-8 horas"
+  nivel="Moderado"
+  distancia="15 km"
+  puntosClave={4}
+  atractivos={['cascada-atlahuitzia', 'grutas', 'pueblo-nahua']}
+/>
+```
+
+### EventCard
+
+Timeline card for events:
+
+```tsx
+<EventCard
+  fecha="2026-07-15"
+  nombre="Festival del Café"
+  lugar="Plaza Principal, Zongolica"
+  descripcion="Annual coffee harvest celebration"
+  categoria="Gastronómico"
+/>
+```
+
+## Accessibility
+
+Xochitlanis follows WCAG AA standards:
+
+- ✅ Semantic HTML headings (h1 → h2 → h3)
+- ✅ Alt text for all images
+- ✅ Keyboard navigation support
+- ✅ Focus indicators (ring-4)
+- ✅ Color contrast ratio > 4.5:1
+- ✅ Reduced motion support via media queries
+- ✅ ARIA labels for decorative elements
+
+## Performance
+
+### Optimizations
+
+- **Lazy loading**: Images load only when visible
+- **Client directives**: Interactive components use `client:visible`
+- **CSS-first animations**: No heavy JS for animations
+- **Tree shaking**: Import only needed components
+- **No external fonts**: Uses system font stack (Inter)
+
+### Metrics
+
+<Note>
+  Target performance metrics:
+  - LCP < 2.5s (Largest Contentful Paint)
+  - FID < 100ms (First Input Delay)
+  - CLS < 0.1 (Cumulative Layout Shift)
+  - Bundle size < 100KB (excluding images)
+</Note>
+
+## Responsive Design
+
+### Breakpoints
+
+```css
+/* Mobile first approach */
+base: 0px;     /* Mobile */
+sm: 640px;     /* Small tablets */
+lg: 1024px;    /* Desktop */
+```
+
+### Grid Behavior
+
+- **Mobile**: Single column layout
+- **Tablet (sm:)**: 2-column grids
+- **Desktop (lg:)**: 3-column grids
+
+### Typography Scale
+
+```css
+/* Mobile → Desktop */
+text-xl sm:text-2xl lg:text-4xl
+text-2xl sm:text-3xl lg:text-5xl
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore Attractions" icon="mountain" href="/tourism/attractions">
+    Browse all 17 tourist attractions
+  </Card>
+  <Card title="View Routes" icon="route" href="/tourism/routes">
+    See curated tourism routes
+  </Card>
+  <Card title="Check Events" icon="calendar" href="/tourism/events">
+    Upcoming tourism events
+  </Card>
+  <Card title="Component Library" icon="cube" href="/development/components/tourism">
+    Explore Xochitlanis components
+  </Card>
+</CardGroup>

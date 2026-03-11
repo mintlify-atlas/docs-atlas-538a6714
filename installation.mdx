@@ -1,0 +1,430 @@
+---
+title: Installation
+description: Complete installation guide for the Ayuntamiento de Zongolica platform
+---
+
+## System Requirements
+
+Before installing, ensure your system meets these requirements:
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    **Version 18.14.1 or higher**
+    
+    Download from [nodejs.org](https://nodejs.org)
+  </Card>
+  <Card title="Package Manager" icon="box">
+    **npm, yarn, or pnpm**
+    
+    npm comes with Node.js
+  </Card>
+  <Card title="Git" icon="git-branch">
+    **Latest stable version**
+    
+    For cloning the repository
+  </Card>
+  <Card title="Supabase Account" icon="database">
+    **Free tier available**
+    
+    Sign up at [supabase.com](https://supabase.com)
+  </Card>
+</CardGroup>
+
+## Install Dependencies
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone <repository-url>
+    cd h-ayuntamiento-zongo
+    ```
+  </Step>
+
+  <Step title="Install Packages">
+    Choose your preferred package manager:
+    
+    <CodeGroup>
+    ```bash npm
+    npm install
+    ```
+    
+    ```bash yarn
+    yarn install
+    ```
+    
+    ```bash pnpm
+    pnpm install
+    ```
+    </CodeGroup>
+    
+    This installs all dependencies from `package.json`:
+    - **Astro** (v5.16.6) - SSR framework
+    - **React** (v19.2.3) - UI components
+    - **Supabase** (v2.93.2) - Backend services
+    - **TailwindCSS** (v4.1.18) - Styling
+    - **Three.js** (v0.182.0) - 3D graphics
+    - **GSAP** (v3.14.2) - Animations
+    - And 30+ other packages
+  </Step>
+</Steps>
+
+## Environment Setup
+
+<Steps>
+  <Step title="Create Environment File">
+    Copy the example environment file:
+    
+    ```bash
+    cp .env.example .env
+    ```
+  </Step>
+
+  <Step title="Configure Supabase Credentials">
+    Edit `.env` with your Supabase project details:
+    
+    ```bash .env
+    PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+    PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+    
+    **Get these values from Supabase:**
+    1. Go to [app.supabase.com](https://app.supabase.com)
+    2. Select your project
+    3. Navigate to **Settings > API**
+    4. Copy **Project URL** → `PUBLIC_SUPABASE_URL`
+    5. Copy **anon public** key → `PUBLIC_SUPABASE_ANON_KEY`
+  </Step>
+
+  <Step title="Configure OAuth Providers (Optional)">
+    For Google/Facebook login, add OAuth credentials:
+    
+    **Google OAuth:**
+    1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+    2. Create a new project or select existing
+    3. Enable Google+ API
+    4. Go to **Credentials > Create OAuth 2.0 Client ID**
+    5. Add authorized redirect URI:
+       ```
+       https://your-project.supabase.co/auth/v1/callback
+       ```
+    6. In Supabase: **Authentication > Providers > Google**
+    7. Enable Google and paste Client ID and Secret
+    
+    **Facebook OAuth:**
+    1. Go to [developers.facebook.com](https://developers.facebook.com)
+    2. Create an app
+    3. Add Facebook Login product
+    4. Add OAuth redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+    5. In Supabase: **Authentication > Providers > Facebook**
+    6. Enable Facebook and paste App ID and Secret
+    
+    <Note>
+      OAuth is optional. The platform also supports email/password authentication out of the box.
+    </Note>
+  </Step>
+
+  <Step title="Optional Services">
+    Configure additional services if needed:
+    
+    ```bash .env
+    # WordPress CMS integration
+    WP_BASE_URL=https://your-wordpress-site.com
+    
+    # Resend email service
+    RESEND_API_KEY=re_xxxxxxxxxxxxx
+    RESEND_FROM=noreply@yourdomain.com
+    
+    # Backend security
+    BACKEND_APP_SECRET=your-secret-key
+    
+    # OpenAI for AI features
+    OPENAI_API_KEY=sk-xxxxxxxxxxxxx
+    ```
+  </Step>
+</Steps>
+
+## Database Setup
+
+<Steps>
+  <Step title="Create Supabase Project">
+    1. Go to [app.supabase.com](https://app.supabase.com)
+    2. Click **New Project**
+    3. Enter project details:
+       - Name: `zongolica-turismo`
+       - Database Password: (save this securely)
+       - Region: Choose closest to your users (e.g., South America - São Paulo)
+    4. Click **Create new project** (takes ~2 minutes)
+  </Step>
+
+  <Step title="Run Database Migration">
+    Go to **SQL Editor** in Supabase and run this schema:
+    
+    ```sql supabase-setup.sql
+    -- Create user profiles table
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      id UUID REFERENCES auth.users(id) PRIMARY KEY,
+      email TEXT,
+      full_name TEXT,
+      avatar_url TEXT,
+      provider TEXT,
+      onboarding_completed BOOLEAN DEFAULT false,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Create user preferences table (tourism onboarding)
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+      experiencia TEXT[],
+      duracion TEXT,
+      dificultad TEXT,
+      grupo TEXT,
+      intereses TEXT[],
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Create user routes table
+    CREATE TABLE IF NOT EXISTS user_routes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+      user_name TEXT,
+      route_name TEXT,
+      atractivos TEXT[],
+      ticket_url TEXT,
+      share_code TEXT UNIQUE,
+      badges TEXT[],
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    -- Create user badges table
+    CREATE TABLE IF NOT EXISTS user_badges (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+      badge_type TEXT NOT NULL,
+      unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(user_id, badge_type)
+    );
+    
+    -- Create user favorites table
+    CREATE TABLE IF NOT EXISTS user_favorites (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+      atractivo_slug TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(user_id, atractivo_slug)
+    );
+    
+    -- Enable Row Level Security
+    ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE user_routes ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE user_favorites ENABLE ROW LEVEL SECURITY;
+    
+    -- RLS Policies for user_profiles
+    CREATE POLICY "Users can view own profile" ON user_profiles
+      FOR SELECT USING (auth.uid() = id);
+    CREATE POLICY "Users can update own profile" ON user_profiles
+      FOR UPDATE USING (auth.uid() = id);
+    CREATE POLICY "Users can insert own profile" ON user_profiles
+      FOR INSERT WITH CHECK (auth.uid() = id);
+    
+    -- RLS Policies for user_preferences
+    CREATE POLICY "Users can view own preferences" ON user_preferences
+      FOR SELECT USING (auth.uid() = user_id);
+    CREATE POLICY "Users can insert own preferences" ON user_preferences
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+    CREATE POLICY "Users can update own preferences" ON user_preferences
+      FOR UPDATE USING (auth.uid() = user_id);
+    
+    -- RLS Policies for user_routes
+    CREATE POLICY "Anyone can view routes" ON user_routes
+      FOR SELECT USING (true);
+    CREATE POLICY "Users can insert own routes" ON user_routes
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+    CREATE POLICY "Users can update own routes" ON user_routes
+      FOR UPDATE USING (auth.uid() = user_id);
+    
+    -- RLS Policies for user_badges
+    CREATE POLICY "Users can view own badges" ON user_badges
+      FOR SELECT USING (auth.uid() = user_id);
+    CREATE POLICY "Users can insert own badges" ON user_badges
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+    
+    -- RLS Policies for user_favorites
+    CREATE POLICY "Users can view own favorites" ON user_favorites
+      FOR SELECT USING (auth.uid() = user_id);
+    CREATE POLICY "Users can insert own favorites" ON user_favorites
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+    CREATE POLICY "Users can delete own favorites" ON user_favorites
+      FOR DELETE USING (auth.uid() = user_id);
+    
+    -- Create storage bucket for tickets (if not exists)
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('tickets', 'tickets', true)
+    ON CONFLICT (id) DO NOTHING;
+    
+    -- Storage policy for tickets
+    CREATE POLICY "Anyone can view tickets" ON storage.objects
+      FOR SELECT USING (bucket_id = 'tickets');
+    CREATE POLICY "Authenticated users can upload tickets" ON storage.objects
+      FOR INSERT WITH CHECK (
+        bucket_id = 'tickets' AND
+        auth.role() = 'authenticated'
+      );
+    ```
+    
+    Click **Run** to execute the migration.
+  </Step>
+
+  <Step title="Configure Storage Bucket">
+    The SQL script creates a `tickets` bucket. Verify it:
+    
+    1. Go to **Storage** in Supabase
+    2. Confirm `tickets` bucket exists
+    3. Ensure it's set to **Public**
+    4. This bucket stores generated route ticket images
+  </Step>
+
+  <Step title="Enable Email Authentication">
+    1. Go to **Authentication > Providers**
+    2. Find **Email** provider
+    3. Toggle **Enable Email provider** to ON
+    4. For development, disable "Confirm email" (optional)
+    5. Click **Save**
+  </Step>
+</Steps>
+
+## Build and Deploy
+
+<Steps>
+  <Step title="Test Local Build">
+    Build the production version locally:
+    
+    ```bash
+    npm run build
+    ```
+    
+    Preview the production build:
+    
+    ```bash
+    npm run preview
+    ```
+  </Step>
+
+  <Step title="Deploy to Vercel">
+    The platform is optimized for Vercel deployment:
+    
+    1. Push your code to GitHub/GitLab/Bitbucket
+    2. Go to [vercel.com](https://vercel.com)
+    3. Click **Import Project**
+    4. Select your repository
+    5. Configure build settings:
+       - Framework Preset: **Astro**
+       - Build Command: `npm run build`
+       - Output Directory: `dist`
+    6. Add environment variables:
+       - `PUBLIC_SUPABASE_URL`
+       - `PUBLIC_SUPABASE_ANON_KEY`
+       - Any other variables from your `.env`
+    7. Click **Deploy**
+  </Step>
+
+  <Step title="Update OAuth Redirect URLs">
+    After deployment, update OAuth settings:
+    
+    **In Supabase (Authentication > URL Configuration):**
+    - Site URL: `https://your-domain.com`
+    - Redirect URLs:
+      - `https://your-domain.com/auth/callback`
+      - `http://localhost:4321/auth/callback` (for development)
+    
+    **In Google Cloud Console:**
+    - Add authorized redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+    
+    **In Facebook Developers:**
+    - Add OAuth redirect URI: `https://your-project.supabase.co/auth/v1/callback`
+  </Step>
+</Steps>
+
+## Verify Installation
+
+<Steps>
+  <Step title="Check Homepage">
+    Visit your deployed site and verify:
+    - Government portal loads
+    - Navigation works
+    - Images display correctly
+  </Step>
+
+  <Step title="Test Authentication">
+    1. Go to `/turismo`
+    2. Click to start onboarding
+    3. Try logging in with Google/Email
+    4. Verify redirect works
+  </Step>
+
+  <Step title="Test Tourism Features">
+    1. Complete the onboarding flow
+    2. Verify preferences are saved
+    3. Check that route ticket is generated
+    4. Try sharing a route
+  </Step>
+
+  <Step title="Verify Database">
+    Check Supabase Table Editor:
+    - `user_profiles` - Contains your user profile
+    - `user_preferences` - Has your onboarding answers
+    - `user_routes` - Shows generated routes
+    - `user_badges` - Lists unlocked badges
+  </Step>
+</Steps>
+
+## Production Checklist
+
+<Warning>
+  Before going live, complete these security and optimization steps:
+</Warning>
+
+- [ ] Update all OAuth redirect URLs to production domain
+- [ ] Enable email confirmation in Supabase
+- [ ] Set up CORS policies in Supabase if needed
+- [ ] Configure rate limiting for auth endpoints
+- [ ] Add analytics (Google Analytics, Plausible, etc.)
+- [ ] Optimize images with CDN
+- [ ] Set up monitoring and error tracking
+- [ ] Review RLS policies for security
+- [ ] Test all user flows end-to-end
+- [ ] Set up automated backups in Supabase
+
+## Supabase Free Tier Limits
+
+<Note>
+  The free tier is suitable for development and moderate production use:
+</Note>
+
+- **Database:** 500 MB
+- **Storage:** 1 GB
+- **Bandwidth:** 2 GB/month
+- **Auth Users:** Unlimited
+- **API Requests:** Unlimited
+
+For high-traffic production, consider upgrading to Supabase Pro ($25/month).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Government Portal Features" icon="landmark" href="/features/government-portal">
+    Learn about institutional pages and services
+  </Card>
+  <Card title="Tourism System" icon="compass" href="/features/tourism-system">
+    Explore the Xochitlanis onboarding and gamification
+  </Card>
+  <Card title="Multilingual Support" icon="language" href="/features/multilingual">
+    Configure and manage translations
+  </Card>
+  <Card title="Authentication" icon="shield" href="/features/authentication">
+    Deep dive into user management
+  </Card>
+</CardGroup>

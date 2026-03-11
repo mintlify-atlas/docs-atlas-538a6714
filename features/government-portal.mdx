@@ -1,0 +1,428 @@
+---
+title: Government Portal Features
+description: Municipal services, institutional information, and transparency tools
+---
+
+## Overview
+
+The government portal serves as the official digital presence of the Ayuntamiento de Zongolica, providing citizens with access to municipal services, institutional information, and transparency documents.
+
+<Note>
+  All government pages are server-rendered for optimal SEO and accessibility.
+</Note>
+
+## Key Features
+
+### Institutional Information
+
+The portal provides comprehensive information about the municipal government structure:
+
+<CardGroup cols={2}>
+  <Card title="Gobierno" icon="landmark" href="/gobierno">
+    **Municipal Government**
+    
+    Information about the president, síndico, regidurías, and organizational structure.
+  </Card>
+  
+  <Card title="Ejes" icon="list" href="/ejes">
+    **Government Axes**
+    
+    Strategic pillars and focus areas of the current administration.
+  </Card>
+  
+  <Card title="Directorio" icon="address-book" href="/directorio">
+    **Directory**
+    
+    Contact information for government officials and departments.
+  </Card>
+  
+  <Card title="Plan de Desarrollo" icon="map" href="/plan-de-desarollo-municipal">
+    **Municipal Development Plan**
+    
+    Long-term vision and strategic planning documents.
+  </Card>
+</CardGroup>
+
+### Municipal Services
+
+Citizens can access various municipal services online:
+
+#### Servicios (Services)
+
+Location: `/servicios`
+
+Provides information about available municipal services including:
+- Public works and infrastructure
+- Civil registry services
+- Public safety and civil protection
+- Urban development and planning
+- Environmental services
+
+```astro src/pages/servicios/index.astro
+---
+export const prerender = false;
+---
+```
+
+#### Trámites (Procedures)
+
+Location: `/tramites`
+
+Online procedures and requirements for:
+- Permits and licenses
+- Property tax payments
+- Birth/death certificates
+- Business registrations
+- Construction permits
+
+<Note>
+  Procedures are configured as server-side rendered pages to ensure up-to-date information.
+</Note>
+
+### Transparency and Downloads
+
+#### Transparency Portal
+
+Location: `/transparencia`
+
+Public access to government transparency information:
+- Budget and financial reports
+- Procurement processes
+- Public employee directory
+- Legal framework and regulations
+- Public works contracts
+
+#### Downloads Section
+
+Location: `/descargas`
+
+Downloadable official documents:
+- PDF forms and formats
+- Regulations and bylaws
+- Reports and statistics
+- Public announcements
+- Municipal gazette
+
+### Directory of Officials
+
+Location: `/directorio`
+
+Comprehensive directory system with:
+
+**List View** (`/directorio/index.astro`):
+- Grid of government officials
+- Department categorization
+- Search and filter capabilities
+- Contact information overview
+
+**Detail Pages** (`/directorio/[slug].astro`):
+- Official biography and photo
+- Department responsibilities
+- Direct contact information
+- Office hours and location
+
+```astro src/pages/directorio/[slug].astro
+---
+import Layout from "@/layouts/Layout.astro";
+export const prerender = false;
+
+// Dynamic route for individual officials
+const { slug } = Astro.params;
+---
+```
+
+### Call-to-Action Pages
+
+Location: `/cta/[slug]`
+
+Dynamic alert and announcement system:
+
+<CardGroup cols={2}>
+  <Card title="Emergency Alerts" icon="triangle-alert">
+    Critical public safety announcements and emergency notifications
+  </Card>
+  
+  <Card title="Public Notices" icon="megaphone">
+    Important municipal announcements and public consultations
+  </Card>
+  
+  <Card title="Event Announcements" icon="calendar">
+    Civic events, town halls, and community gatherings
+  </Card>
+  
+  <Card title="Service Updates" icon="info">
+    Changes to municipal services and office closures
+  </Card>
+</CardGroup>
+
+**Implementation:**
+
+```astro src/pages/cta/[slug].astro
+---
+export const prerender = false;
+
+const { slug } = Astro.params;
+// Fetch CTA data from CMS or API
+const cta = await getCta(slug);
+---
+```
+
+**Display on Homepage:**
+
+```astro src/pages/index.astro
+---
+import PromoBanner from "@/components/PromoBanner.astro";
+import { getCtas } from "@/lib/getCtas";
+
+const ctas = await getCtas();
+---
+
+<section id="avisos">
+  {ctas.map((cta) => (
+    <PromoBanner {...cta} accentColor="#FF8200" />
+  ))}
+</section>
+```
+
+## Homepage Structure
+
+The main portal homepage (`/`) includes:
+
+### Hero Section
+
+Welcome banner with municipal identity:
+- Official escudo (coat of arms)
+- Welcome message
+- Key statistics
+- Quick links to services
+
+```astro src/pages/index.astro
+<Hero />
+```
+
+### Access Links
+
+Quick navigation to main sections:
+
+```astro
+<Access />
+```
+
+### CTA Banners
+
+Dynamic announcement banners:
+- Fetched from CMS or database
+- Styled with municipal accent color (#FF8200)
+- Click-through to detail pages
+
+### Government Axes Grid
+
+Visual grid showing administration focus areas:
+
+```astro
+<EjesGrid />
+```
+
+### Service Cards
+
+Interactive cards linking to key sections:
+
+```astro
+<a
+  href="/gobierno"
+  class="group block rounded-3xl border border-black/10 bg-white p-6 shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl hover:border-[#ff8200]/20 hover:bg-gradient-to-br hover:from-white hover:to-[#ff8200]/5"
+>
+  <div class="flex items-center justify-between gap-4">
+    <div>
+      <p class="text-xs font-extrabold tracking-wide text-black/60 uppercase">
+        Información institucional
+      </p>
+      <h3 class="mt-2 text-2xl font-black text-[#111827] group-hover:text-[#ff8200] transition duration-300">
+        Gobierno municipal
+      </h3>
+      <p class="mt-2 text-sm text-black/60">
+        Conoce al presidente, síndico, regidurías y DIF.
+      </p>
+    </div>
+    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ff8200] text-white">
+      →
+    </span>
+  </div>
+</a>
+```
+
+## Design System
+
+### Color Palette
+
+**Primary Color:** `#FF8200` (Municipal Orange)
+
+```css
+/* Used throughout government portal */
+.accent-color {
+  color: #ff8200;
+}
+
+.accent-bg {
+  background: #ff8200;
+}
+```
+
+### Typography
+
+**Font Family:** Poppins
+
+```typescript package.json
+"dependencies": {
+  "@fontsource/poppins": "^5.2.7"
+}
+```
+
+### Animations
+
+Smooth fade-in animations for sections:
+
+```astro
+<section class="animate-fadeIn" style="animation-delay: 0.1s">
+  <!-- Content -->
+</section>
+```
+
+## Common Patterns
+
+### Page Layout
+
+All government pages use the base layout:
+
+```astro
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="Page Title - H. Ayuntamiento de Zongolica"
+  description="Page description for SEO"
+  image="/assets/logos/escudo.webp"
+>
+  <!-- Page content -->
+</Layout>
+```
+
+### Server-Side Rendering
+
+Government pages are dynamically rendered:
+
+```astro
+---
+export const prerender = false;
+---
+```
+
+This ensures:
+- Fresh content on every request
+- Dynamic CTA banners
+- Real-time service updates
+- SEO optimization
+
+### Responsive Design
+
+Mobile-first approach with TailwindCSS:
+
+```html
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <!-- Responsive grid -->
+</div>
+```
+
+## Integration Points
+
+### WordPress CMS (Optional)
+
+Government content can be managed via WordPress:
+
+```env
+WP_BASE_URL=https://cms.zongolica.gob.mx
+```
+
+Fetch content in Astro pages:
+
+```typescript
+const response = await fetch(`${WP_BASE_URL}/wp-json/wp/v2/posts`);
+const posts = await response.json();
+```
+
+### Contact Forms
+
+Email notifications via Resend:
+
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+RESEND_FROM=contacto@zongolica.gob.mx
+```
+
+## Accessibility
+
+<CardGroup cols={2}>
+  <Card title="Semantic HTML" icon="code">
+    Proper heading hierarchy and ARIA labels for screen readers
+  </Card>
+  
+  <Card title="Keyboard Navigation" icon="keyboard">
+    All interactive elements accessible via keyboard
+  </Card>
+  
+  <Card title="Color Contrast" icon="eye">
+    WCAG AA compliant color combinations
+  </Card>
+  
+  <Card title="Responsive Text" icon="text-size">
+    Readable font sizes on all devices
+  </Card>
+</CardGroup>
+
+## SEO Optimization
+
+### Meta Tags
+
+Every page includes:
+- Title (max 60 characters)
+- Description (max 160 characters)
+- Open Graph tags
+- Twitter Card tags
+- Canonical URLs
+
+### Structured Data
+
+JSON-LD for government organizations:
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "GovernmentOrganization",
+  "name": "H. Ayuntamiento de Zongolica",
+  "url": "https://zongolica.gob.mx"
+}
+```
+
+## Security
+
+<Warning>
+  Government portals require enhanced security measures:
+</Warning>
+
+- **HTTPS Only** - Enforce SSL/TLS encryption
+- **CORS Policies** - Restrict API access to authorized domains
+- **Rate Limiting** - Prevent abuse of contact forms
+- **Input Validation** - Sanitize all user input
+- **Security Headers** - CSP, X-Frame-Options, etc.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tourism System" icon="compass" href="/features/tourism-system">
+    Learn about the Xochitlanis tourism platform
+  </Card>
+  <Card title="Multilingual Support" icon="language" href="/features/multilingual">
+    Manage Spanish, English, and Nahuatl translations
+  </Card>
+</CardGroup>

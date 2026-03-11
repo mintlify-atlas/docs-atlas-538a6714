@@ -1,0 +1,462 @@
+---
+title: 'Government Data Types'
+description: 'TypeScript interfaces for government programs, CTAs, and directory data'
+icon: 'landmark'
+---
+
+## Overview
+
+This page documents all government-related TypeScript types used in the Zongolica application, including government programs (Ejes), call-to-action announcements, and the municipal directory.
+
+## Eje (Government Program)
+
+Represents a government program or initiative axis.
+
+```typescript
+type Eje = {
+  slug: string;
+  number: number;
+  title?: string;
+  subtitle?: string;
+  coverImage?: string;
+  color?: string;
+  intro: string;
+  highlights?: string[];
+  stats?: EjeStats[];
+  acciones?: EjeAccion[];
+  bloques?: EjeBloque[];
+};
+```
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly identifier (e.g., "infraestructura-servicios")
+</ResponseField>
+
+<ResponseField name="number" type="number" required>
+  Program number (1, 2, 3, 4...)
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Program title (e.g., "Infraestructura y Servicios Básicos")
+</ResponseField>
+
+<ResponseField name="subtitle" type="string">
+  Program tagline (e.g., "Gobierno que camina")
+</ResponseField>
+
+<ResponseField name="coverImage" type="string">
+  Cover image path (e.g., "/assets/ejes/eje1.jpg")
+</ResponseField>
+
+<ResponseField name="color" type="string">
+  Brand color in hex format (e.g., "#0ea5e9")
+</ResponseField>
+
+<ResponseField name="intro" type="string" required>
+  Main introductory paragraph
+</ResponseField>
+
+<ResponseField name="highlights" type="string[]">
+  Key bullet points highlighting the program
+</ResponseField>
+
+<ResponseField name="stats" type="EjeStats[]">
+  Key performance indicators or statistics
+</ResponseField>
+
+<ResponseField name="acciones" type="EjeAccion[]">
+  Featured action cards
+</ResponseField>
+
+<ResponseField name="bloques" type="EjeBloque[]">
+  Action lines or requirement blocks
+</ResponseField>
+
+### Supporting Types
+
+#### EjeStats
+
+Key statistics for a government program.
+
+```typescript
+type EjeStats = {
+  label: string;
+  value: string;
+};
+```
+
+#### EjeAccion
+
+Featured action within a government program.
+
+```typescript
+type EjeAccion = {
+  title: string;
+  desc: string;
+};
+```
+
+#### EjeBloque
+
+Thematic block of related items.
+
+```typescript
+type EjeBloque = {
+  title: string;
+  items: string[];
+};
+```
+
+### Example
+
+```json
+{
+  "slug": "infraestructura-servicios",
+  "number": 1,
+  "title": "Infraestructura y Servicios Básicos",
+  "subtitle": "Caminos, agua y servicios que sí lleguen",
+  "coverImage": "/assets/ejes/eje1.jpg",
+  "color": "#0ea5e9",
+  "intro": "La demanda más sentida en diversas localidades es la rehabilitación de caminos...",
+  "highlights": [
+    "Rehabilitación de caminos principales con coordinación comunitaria",
+    "Atención a escasez de agua con soluciones por zonas",
+    "Clínicas rurales: gestión de médicos y medicamentos"
+  ],
+  "stats": [
+    { "label": "Comunidades prioritarias", "value": "15+" },
+    { "label": "Temas urgentes", "value": "Caminos · Agua · Salud" }
+  ],
+  "acciones": [
+    {
+      "title": "Rehabilitación de camino principal",
+      "desc": "Plan por tramos con faenas, material y gestión ante instancias estatales/federales."
+    }
+  ]
+}
+```
+
+---
+
+## CTA (Call to Action)
+
+Represents a government announcement, campaign, or call-to-action.
+
+```typescript
+type CTA = {
+  slug: string;
+  logos?: Array<{ src: string; alt: string }>;
+  eyebrow?: string;
+  title: string;
+  highlight?: string;
+  subtitle?: string;
+  pillText?: string;
+  bullets?: CTABullet[];
+  footnote?: string;
+  ctaText?: string;
+  ctaHref?: string;
+  secondaryCtaText?: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  description?: string;
+  sections?: CTASection[];
+  contact?: CTAContact;
+  downloads?: CTADownload[];
+};
+```
+
+<ResponseField name="slug" type="string" required>
+  URL path (e.g., "esterilizacion-canina" for /cta/esterilizacion-canina)
+</ResponseField>
+
+<ResponseField name="logos" type="Array<{ src: string; alt: string }>">
+  Government logos displayed in header
+</ResponseField>
+
+<ResponseField name="eyebrow" type="string">
+  Small text above title (e.g., "AVISO", "RECORDATORIO")
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  Main announcement title
+</ResponseField>
+
+<ResponseField name="highlight" type="string">
+  Highlighted text (often displayed larger or in accent color)
+</ResponseField>
+
+<ResponseField name="subtitle" type="string">
+  Secondary title or location
+</ResponseField>
+
+<ResponseField name="pillText" type="string">
+  Badge/pill text (e.g., "17 de Marzo · 9 am a 5 pm")
+</ResponseField>
+
+<ResponseField name="bullets" type="CTABullet[]">
+  Key information bullets for quick reference
+</ResponseField>
+
+<ResponseField name="footnote" type="string">
+  Footer note (e.g., "Cupo limitado")
+</ResponseField>
+
+<ResponseField name="ctaText" type="string">
+  Primary button text
+</ResponseField>
+
+<ResponseField name="ctaHref" type="string">
+  Primary button link (if empty, defaults to /cta/:slug)
+</ResponseField>
+
+<ResponseField name="secondaryCtaText" type="string">
+  Secondary button text (links to detail page)
+</ResponseField>
+
+<ResponseField name="imageSrc" type="string">
+  Banner image path
+</ResponseField>
+
+<ResponseField name="imageAlt" type="string">
+  Image alt text
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Full description for detail page
+</ResponseField>
+
+<ResponseField name="sections" type="CTASection[]">
+  Content sections with requirements, instructions, etc.
+</ResponseField>
+
+<ResponseField name="contact" type="CTAContact">
+  Contact information (phone, WhatsApp, notes)
+</ResponseField>
+
+<ResponseField name="downloads" type="CTADownload[]">
+  Downloadable files (PDFs, forms, etc.)
+</ResponseField>
+
+### Supporting Types
+
+#### CTABullet
+
+Formatted bullet point with emphasis.
+
+```typescript
+type CTABullet = {
+  strong: string;
+  text: string;
+};
+```
+
+**Example:**
+```json
+{ "strong": "Gatos", "text": "$250.00" }
+```
+
+#### CTASection
+
+Content section with title and list items.
+
+```typescript
+type CTASection = {
+  title: string;
+  items: string[];
+};
+```
+
+**Example:**
+```json
+{
+  "title": "Requisitos para trámite",
+  "items": [
+    "Copia de INE",
+    "Copia de CURP",
+    "5 fotografías tamaño infantil"
+  ]
+}
+```
+
+#### CTAContact
+
+Contact information for inquiries.
+
+```typescript
+type CTAContact = {
+  phone?: string;
+  whatsapp?: string;
+  note?: string;
+};
+```
+
+#### CTADownload
+
+Downloadable file configuration.
+
+```typescript
+type CTADownload = {
+  text: string;
+  href: string;
+  filename?: string;
+  external?: boolean;
+};
+```
+
+### Example
+
+```json
+{
+  "slug": "esterilizacion-canina",
+  "eyebrow": "AVISO",
+  "title": "JORNADAS DE ESTERILIZACIÓN CANINA",
+  "highlight": "120 LUGARES DISPONIBLES",
+  "subtitle": "POLIDEPORTIVO SIERA",
+  "pillText": "17 de Marzo · 9 am a 5 pm",
+  "bullets": [
+    { "strong": "Gatos", "text": "$250.00" },
+    { "strong": "Perro criollo", "text": "$300.00" },
+    { "strong": "Perro de raza", "text": "Varia según tamaño" }
+  ],
+  "footnote": "Cupo limitado, aparta tu lugar con anticipación",
+  "ctaText": "APARTA TU LUGAR",
+  "ctaHref": "",
+  "secondaryCtaText": "VER AVISO COMPLETO",
+  "imageSrc": "/assets/avatar/animals/gato.webp",
+  "downloads": [
+    {
+      "text": "Descargar convocatoria",
+      "href": "https://docs.zongolica.gob.mx/convocatorias/esterilizacion.pdf",
+      "external": true
+    }
+  ],
+  "logos": [
+    { "src": "/assets/logos/logo-ayuntamiento.png", "alt": "H. Ayuntamiento" },
+    { "src": "/assets/logos/logo-zongolica.png", "alt": "Zongolica" }
+  ]
+}
+```
+
+---
+
+## Directorio (Municipal Directory)
+
+Municipal government directory stored in `/src/data/directorio.json`.
+
+```typescript
+type Directorio = {
+  slug: string;
+  edificio: string;
+  area: string;
+  personal: PersonalDirectorio[];
+};
+
+type PersonalDirectorio = {
+  nombre: string;
+  puesto: string;
+  telefono: string | null;
+  correo: string | null;
+};
+```
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly identifier for the department
+</ResponseField>
+
+<ResponseField name="edificio" type="string" required>
+  Building location (e.g., "Edificio A", "Edificio B")
+</ResponseField>
+
+<ResponseField name="area" type="string" required>
+  Department or area name
+</ResponseField>
+
+<ResponseField name="personal" type="PersonalDirectorio[]" required>
+  Array of staff members in this department
+</ResponseField>
+
+### PersonalDirectorio Fields
+
+<ResponseField name="nombre" type="string" required>
+  Full name of the staff member
+</ResponseField>
+
+<ResponseField name="puesto" type="string" required>
+  Job title or position
+</ResponseField>
+
+<ResponseField name="telefono" type="string | null">
+  Phone number (null if not available)
+</ResponseField>
+
+<ResponseField name="correo" type="string | null">
+  Email address (null if not available)
+</ResponseField>
+
+### Example
+
+```json
+{
+  "slug": "instituto-municipal-de-la-mujer",
+  "edificio": "Edificio A",
+  "area": "Instituto Municipal De La Mujer",
+  "personal": [
+    {
+      "nombre": "Lic. Damaris Maricruz Zavaleta Garcia",
+      "puesto": "Coordinadora",
+      "telefono": null,
+      "correo": null
+    },
+    {
+      "nombre": "Dulce Olivia Hérnández Cano",
+      "puesto": "Auxiliar",
+      "telefono": null,
+      "correo": null
+    }
+  ]
+}
+```
+
+---
+
+## Usage Examples
+
+### Importing Government Types
+
+```typescript
+import { ejes, type Eje } from '@/data/ejes';
+import { callToActions, type CTA } from '@/data/callToActions';
+import directorio from '@/data/directorio.json';
+
+// Use the data
+const primerEje = ejes[0];
+const ctaActual = callToActions.find(cta => cta.slug === 'predial');
+const departamentos = directorio;
+```
+
+### Filtering CTAs
+
+```typescript
+const avisos = callToActions.filter(cta => cta.eyebrow === 'AVISO');
+const recordatorios = callToActions.filter(cta => cta.eyebrow === 'RECORDATORIO');
+```
+
+### Accessing Eje Data
+
+```typescript
+const eje = ejes.find(e => e.slug === 'desarrollo-agropecuario');
+
+if (eje) {
+  console.log(eje.title); // "Desarrollo Agropecuario y Rural"
+  console.log(eje.highlights); // Array of highlight bullets
+  console.log(eje.stats); // KPIs
+}
+```
+
+---
+
+## Related Documentation
+
+- [User Data Types](/api/types/user) - User profiles and authentication
+- [Tourism Data Types](/api/types/tourism) - Tourist attractions and routes
+- [Database Schema](/api/database/schema) - Complete database structure

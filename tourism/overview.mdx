@@ -1,0 +1,128 @@
+---
+title: "Tourism System Overview"
+description: "Complete overview of the interactive tourism system for Zongolica"
+---
+
+## What is the Tourism System?
+
+The Ayuntamiento de Zongolica tourism system is an interactive platform that provides personalized tourism experiences for visitors to the Sierra de Zongolica region. It combines user authentication, personalized recommendations, gamification, and social sharing to create an engaging tourism experience.
+
+## Key Components
+
+The tourism system consists of four main components:
+
+<CardGroup cols={2}>
+  <Card title="Interactive Onboarding" icon="clipboard-question" href="/tourism/onboarding">
+    5-step questionnaire that collects user preferences and interests
+  </Card>
+  <Card title="Recommendation Engine" icon="sparkles" href="/tourism/recommendations">
+    Algorithm that matches users with personalized tourist attractions
+  </Card>
+  <Card title="Badge System" icon="trophy" href="/tourism/badges">
+    Gamification with 29 unique badges to unlock through exploration
+  </Card>
+  <Card title="Ticket Generation" icon="ticket" href="/tourism/tickets">
+    Visual tickets with QR codes for sharing on social media
+  </Card>
+</CardGroup>
+
+## User Journey
+
+The complete tourism experience follows this flow:
+
+<Steps>
+  <Step title="Authentication">
+    Users sign in with Google or Facebook OAuth to create their profile
+  </Step>
+  <Step title="Onboarding">
+    Complete a 5-step questionnaire about travel preferences, duration, difficulty level, travel group, and specific interests
+  </Step>
+  <Step title="Recommendations">
+    Receive personalized recommendations from 17 tourist attractions based on preferences
+  </Step>
+  <Step title="Badge Unlocking">
+    Earn badges based on profile creation, favorites, and visits to attractions
+  </Step>
+  <Step title="Ticket Creation">
+    Generate a unique visual ticket with QR code showing their personalized route
+  </Step>
+  <Step title="Social Sharing">
+    Share tickets on Facebook, Twitter, WhatsApp, or download as PNG
+  </Step>
+</Steps>
+
+## Tourist Attractions
+
+The system features **17 unique attractions** across the Sierra de Zongolica:
+
+### Categories
+
+- **Cascadas (Waterfalls)**: Natural waterfalls with scenic views
+- **Grutas (Caves)**: Underground cave systems
+- **Miradores (Viewpoints)**: Mountain viewpoints with panoramic vistas
+- **Pueblos (Towns)**: Traditional Náhuatl communities
+- **Naturaleza (Nature)**: Natural reserves and hiking trails
+- **Cultura (Culture)**: Cultural centers and museums
+
+<Note>
+  All attractions include detailed information about location, difficulty level, duration, and safety recommendations.
+</Note>
+
+## Features
+
+### Xochitlanis Platform
+
+Xochitlanis is the premium tourism landing page that showcases:
+
+- Featured experiences and routes
+- Tourism events calendar
+- Visitor services (transportation, lodging, emergency contacts)
+- Interactive maps and galleries
+
+[Learn more about Xochitlanis →](/tourism/xochitlanis)
+
+### User Profiles
+
+Each authenticated user gets a complete profile with:
+
+- Saved preferences from onboarding
+- Favorite attractions
+- Created routes
+- Unlocked badges
+- Visit history
+
+### Route Planning
+
+Users can create custom tourism routes by:
+
+1. Selecting attractions from recommendations or full catalog
+2. Organizing them into a trip itinerary
+3. Generating a shareable route with unique code
+4. Sharing with friends and family
+
+## Technical Stack
+
+The tourism system is built with:
+
+- **Frontend**: Astro + React for interactive components
+- **Authentication**: Supabase Auth with OAuth
+- **Database**: PostgreSQL (Supabase) for user data
+- **Storage**: Supabase Storage for ticket images
+- **APIs**: Custom endpoints for ticket generation and verification
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore Onboarding" icon="rocket" href="/tourism/onboarding">
+    Learn how the 5-step onboarding process works
+  </Card>
+  <Card title="View Attractions" icon="mountain" href="/tourism/attractions">
+    Browse all 17 tourist attractions in the system
+  </Card>
+  <Card title="Understand Badges" icon="medal" href="/tourism/badges">
+    See all 29 badges users can unlock
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/tourism">
+    Explore the tourism API endpoints
+  </Card>
+</CardGroup>

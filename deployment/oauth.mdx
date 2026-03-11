@@ -1,0 +1,406 @@
+---
+title: OAuth Configuration
+description: Set up Google and Facebook OAuth authentication for your application
+---
+
+## Overview
+
+The application supports OAuth authentication through Supabase, allowing users to sign in with Google or Facebook. This guide covers the complete setup process for both providers.
+
+<Note>
+For the MVP, email/password authentication is already functional. OAuth is optional but provides a better user experience.
+</Note>
+
+## Google OAuth Setup
+
+Set up Google OAuth to allow users to sign in with their Google accounts.
+
+<Steps>
+  <Step title="Create Google Cloud Project">
+    1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+    2. Create a new project or select an existing one
+    3. Name it something like "Zongolica Turismo"
+  </Step>
+  
+  <Step title="Configure OAuth Consent Screen">
+    1. Navigate to **APIs & Services** → **OAuth consent screen**
+    2. Select **External** user type
+    3. Click **Create**
+    4. Fill in required information:
+       - **App name**: Ayuntamiento de Zongolica
+       - **User support email**: Your support email
+       - **Developer contact**: Your email
+    5. Click **Save and Continue**
+    6. Skip adding scopes (default is sufficient)
+    7. Add test users if needed for development
+    8. Click **Save and Continue**
+  </Step>
+  
+  <Step title="Create OAuth 2.0 Credentials">
+    1. Go to **Credentials** in the left sidebar
+    2. Click **Create Credentials** → **OAuth client ID**
+    3. Select **Web application**
+    4. Name: "Zongolica Web App"
+    5. Add **Authorized JavaScript origins**:
+       ```
+       http://localhost:4321
+       https://your-production-domain.com
+       ```
+    6. Add **Authorized redirect URIs**:
+       ```
+       https://[your-project-ref].supabase.co/auth/v1/callback
+       ```
+       (Get your project ref from Supabase Settings → API)
+    7. Click **Create**
+  </Step>
+  
+  <Step title="Copy Credentials">
+    Google will show your:
+    - **Client ID**: `123456789-abc.apps.googleusercontent.com`
+    - **Client Secret**: `GOCSPX-abc123...`
+    
+    Save both securely - you'll need them for Supabase.
+  </Step>
+  
+  <Step title="Configure in Supabase">
+    1. Go to your Supabase project
+    2. Navigate to **Authentication** → **Providers**
+    3. Find **Google** and click to configure
+    4. Enable the provider ✅
+    5. Paste your **Client ID**
+    6. Paste your **Client Secret**
+    7. Click **Save**
+  </Step>
+</Steps>
+
+### Google OAuth Scopes
+
+By default, the application requests these scopes:
+
+- `email` - User's email address
+- `profile` - Basic profile information (name, picture)
+
+These are automatically included and don't need special configuration.
+
+## Facebook OAuth Setup
+
+Set up Facebook OAuth to allow users to sign in with Facebook.
+
+<Steps>
+  <Step title="Create Facebook App">
+    1. Go to [developers.facebook.com](https://developers.facebook.com)
+    2. Click **My Apps** → **Create App**
+    3. Choose **Consumer** as app type
+    4. Click **Next**
+  </Step>
+  
+  <Step title="Configure App Details">
+    1. **Display Name**: Ayuntamiento de Zongolica
+    2. **App Contact Email**: Your support email
+    3. Click **Create App**
+  </Step>
+  
+  <Step title="Add Facebook Login Product">
+    1. In the app dashboard, find **Facebook Login**
+    2. Click **Set Up**
+    3. Choose **Web** platform
+    4. Enter your site URL: `https://your-domain.com`
+    5. Click **Save**
+  </Step>
+  
+  <Step title="Configure OAuth Redirect URIs">
+    1. Go to **Facebook Login** → **Settings**
+    2. In **Valid OAuth Redirect URIs**, add:
+       ```
+       https://[your-project-ref].supabase.co/auth/v1/callback
+       ```
+    3. Click **Save Changes**
+  </Step>
+  
+  <Step title="Copy App Credentials">
+    1. Go to **Settings** → **Basic**
+    2. Copy your **App ID**: `123456789012345`
+    3. Click **Show** on **App Secret** and copy it
+  </Step>
+  
+  <Step title="Configure in Supabase">
+    1. Go to your Supabase project
+    2. Navigate to **Authentication** → **Providers**
+    3. Find **Facebook** and click to configure
+    4. Enable the provider ✅
+    5. Paste your **App ID** (as Client ID)
+    6. Paste your **App Secret** (as Client Secret)
+    7. Click **Save**
+  </Step>
+  
+  <Step title="Set App to Live Mode">
+    **Important**: For production, you must make your app public:
+    1. Go to **Settings** → **Basic**
+    2. Click **App Mode** toggle to switch to **Live**
+    3. You may need to complete App Review for certain permissions
+  </Step>
+</Steps>
+
+### Facebook OAuth Scopes
+
+The application requests:
+
+- `email` - User's email address
+- `public_profile` - Name and profile picture
+
+These are included by default and approved automatically.
+
+## Configure Redirect URIs
+
+Ensure your redirect URIs are configured correctly in both OAuth providers and Supabase.
+
+### Development URLs
+
+For local development:
+
+```
+http://localhost:4321/auth/callback
+```
+
+### Production URLs
+
+For your deployed site:
+
+```
+https://your-domain.com/auth/callback
+```
+
+<Warning>
+Redirect URIs must match **exactly**, including:
+- Protocol (http vs https)
+- Domain (with or without www)
+- Path (/auth/callback)
+
+Mismatches will cause authentication to fail.
+</Warning>
+
+## Update Supabase Site URL
+
+<Steps>
+  <Step title="Open URL Configuration">
+    In Supabase, go to **Authentication** → **URL Configuration**
+  </Step>
+  
+  <Step title="Set Site URL">
+    **Development**:
+    ```
+    http://localhost:4321
+    ```
+    
+    **Production**:
+    ```
+    https://your-domain.com
+    ```
+  </Step>
+  
+  <Step title="Add Redirect URLs">
+    Add all valid redirect URLs (one per line):
+    ```
+    http://localhost:4321/auth/callback
+    https://your-domain.com/auth/callback
+    ```
+  </Step>
+  
+  <Step title="Save Configuration">
+    Click **Save** to apply changes
+  </Step>
+</Steps>
+
+## Test Authentication Flow
+
+Verify that OAuth is working correctly.
+
+<Steps>
+  <Step title="Start Development Server">
+    ```bash
+    npm run dev
+    ```
+  </Step>
+  
+  <Step title="Open Authentication Page">
+    Navigate to:
+    ```
+    http://localhost:4321/turismo
+    ```
+  </Step>
+  
+  <Step title="Click OAuth Button">
+    1. Click the onboarding trigger
+    2. Click "Continue with Google" or "Continue with Facebook"
+  </Step>
+  
+  <Step title="Complete OAuth Flow">
+    1. You should be redirected to Google/Facebook
+    2. Authorize the application
+    3. You should be redirected back to your app
+    4. You should see the onboarding continue as an authenticated user
+  </Step>
+  
+  <Step title="Verify in Supabase">
+    Check **Authentication** → **Users** in Supabase dashboard to see the new user
+  </Step>
+</Steps>
+
+## Handle Authentication in Code
+
+The application includes authentication utilities in `src/lib/supabase.ts`:
+
+```typescript
+import { supabase } from '@/lib/supabase';
+
+// Sign in with Google
+async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`
+    }
+  });
+  
+  if (error) {
+    console.error('OAuth error:', error);
+    return;
+  }
+}
+
+// Sign in with Facebook
+async function signInWithFacebook() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'facebook',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`
+    }
+  });
+}
+
+// Check current session
+const { data: { session } } = await supabase.auth.getSession();
+
+// Get current user
+const { data: { user } } = await supabase.auth.getUser();
+
+// Sign out
+await supabase.auth.signOut();
+```
+
+## Authentication Callback Page
+
+The callback handler is at `src/pages/auth/callback.astro`:
+
+```astro
+---
+// Handle OAuth callback
+import { supabase } from '@/lib/supabase';
+
+const url = new URL(Astro.request.url);
+const code = url.searchParams.get('code');
+
+if (code) {
+  await supabase.auth.exchangeCodeForSession(code);
+}
+
+// Redirect to app
+return Astro.redirect('/turismo');
+---
+```
+
+<Note>
+The callback page exchanges the OAuth code for a session token and redirects users back to the application.
+</Note>
+
+## Troubleshooting
+
+### "Redirect URI mismatch" Error
+
+**Cause**: The redirect URI doesn't match what's configured in Google Cloud Console
+
+**Solution**:
+1. Check the exact URI in the error message
+2. Ensure it's added to **Authorized redirect URIs** in Google Cloud
+3. Ensure it matches the Supabase callback URL exactly
+
+### OAuth Window Closes Immediately
+
+**Cause**: Pop-up blockers or incorrect configuration
+
+**Solution**:
+1. Allow pop-ups for your site
+2. Verify OAuth credentials are correct in Supabase
+3. Check browser console for error messages
+
+### "App Not Verified" Warning (Google)
+
+**Cause**: Google shows this for apps not yet verified
+
+**Solution**:
+- For development: Click "Advanced" → "Go to [app name] (unsafe)"
+- For production: Complete Google's app verification process
+
+### Facebook Login Not Working in Production
+
+**Cause**: App is still in development mode
+
+**Solution**:
+1. Go to Facebook App Settings
+2. Switch **App Mode** to **Live**
+3. Complete any required app review steps
+
+### Users Not Being Created in Database
+
+**Cause**: RLS policies preventing writes
+
+**Solution**:
+1. Verify you ran the complete `supabase-setup.sql` script
+2. Check that RLS policies are configured
+3. Ensure user is authenticated before database operations
+
+## Security Best Practices
+
+✅ **Do**:
+- Use HTTPS in production (required for OAuth)
+- Keep OAuth secrets secure and never commit them
+- Use environment variables for credentials
+- Validate redirect URIs strictly
+- Implement CSRF protection (handled by Supabase)
+
+❌ **Don't**:
+- Expose OAuth secrets in client-side code
+- Use HTTP for OAuth in production
+- Add wildcard redirect URIs
+- Share OAuth credentials between environments
+
+## Multiple Environments
+
+Manage OAuth for different environments:
+
+### Development
+- Use separate OAuth app for development
+- Add `http://localhost:4321` to redirect URIs
+- Use test accounts
+
+### Staging
+- Create staging OAuth apps
+- Use staging domain in redirect URIs
+- Limit to team members
+
+### Production
+- Use production OAuth apps
+- Production domain only
+- Complete app verification processes
+- Enable all necessary scopes
+
+## Next Steps
+
+After configuring OAuth:
+
+1. [Test the authentication flow](/deployment/oauth#test-authentication-flow)
+2. [Deploy to production](/deployment/vercel)
+3. Update OAuth redirect URIs with production URLs
+4. Test production authentication
+5. Complete app verification for Google (if needed)
+6. Switch Facebook app to Live mode

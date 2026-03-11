@@ -1,0 +1,374 @@
+---
+title: Vercel Deployment
+description: Deploy your Ayuntamiento de Zongolica application to Vercel
+---
+
+## Overview
+
+Vercel is the recommended hosting platform for the Ayuntamiento de Zongolica application. This guide walks you through deploying your Astro application with the Vercel adapter.
+
+## Prerequisites
+
+Before deploying, ensure you have:
+
+- A [GitHub](https://github.com) account with your code repository
+- A [Vercel](https://vercel.com) account (free tier available)
+- Completed [Supabase setup](/deployment/supabase-setup)
+- Your [environment variables](/deployment/environment-variables) ready
+
+## Project Configuration
+
+The application is already configured for Vercel deployment:
+
+```javascript
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/vercel';
+import react from '@astrojs/react';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+  output: 'server',
+  adapter: vercel(),
+  vite: {
+    plugins: [tailwindcss()]
+  },
+  i18n: {
+    locales: ["es", "en", "nah-MX"],
+    defaultLocale: "es",
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
+  integrations: [react()]
+});
+```
+
+<Note>
+The `output: 'server'` configuration enables SSR (Server-Side Rendering), which is required for authentication and dynamic content.
+</Note>
+
+## Deploy from GitHub
+
+<Steps>
+  <Step title="Push Code to GitHub">
+    Ensure your code is pushed to a GitHub repository:
+    ```bash
+    git add .
+    git commit -m "Ready for deployment"
+    git push origin main
+    ```
+  </Step>
+  
+  <Step title="Connect to Vercel">
+    1. Go to [vercel.com](https://vercel.com) and sign in
+    2. Click **Add New** → **Project**
+    3. Import your GitHub repository
+  </Step>
+  
+  <Step title="Configure Build Settings">
+    Vercel should auto-detect Astro. Verify these settings:
+    
+    - **Framework Preset**: Astro
+    - **Build Command**: `astro build` (or `npm run build`)
+    - **Output Directory**: `dist`
+    - **Install Command**: `npm install`
+  </Step>
+  
+  <Step title="Add Environment Variables">
+    Click **Environment Variables** and add:
+    ```bash
+    PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+    PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+    ```
+    
+    Add any other optional variables your application needs.
+  </Step>
+  
+  <Step title="Deploy">
+    Click **Deploy** and wait for the build to complete (usually 1-2 minutes)
+  </Step>
+</Steps>
+
+## Deploy Configuration
+
+The application includes a `vercel.json` file for advanced configuration:
+
+### URL Redirects
+
+Configured redirects for legacy URLs and route corrections:
+
+```json
+{
+  "redirects": [
+    { 
+      "source": "/xochitlanis", 
+      "destination": "/xochitlallis", 
+      "permanent": true 
+    },
+    { 
+      "source": "/portal/:path*", 
+      "destination": "/", 
+      "permanent": true 
+    }
+  ]
+}
+```
+
+<Note>
+These redirects maintain SEO value from old URLs and ensure visitors reach the correct pages.
+</Note>
+
+### Cache Headers
+
+Optimized caching for static assets:
+
+```json
+{
+  "headers": [
+    {
+      "source": "/_astro/(.*)",
+      "headers": [
+        { 
+          "key": "Cache-Control", 
+          "value": "public, max-age=31536000, immutable" 
+        }
+      ]
+    }
+  ]
+}
+```
+
+This configuration:
+- Caches Astro-generated assets for 1 year
+- Marks them as `immutable` for maximum efficiency
+- Reduces bandwidth and improves load times
+
+## Custom Domain Setup
+
+<Steps>
+  <Step title="Add Domain in Vercel">
+    1. Go to your project **Settings** → **Domains**
+    2. Click **Add Domain**
+    3. Enter your domain (e.g., `zongolica.gob.mx`)
+  </Step>
+  
+  <Step title="Configure DNS Records">
+    Add these DNS records in your domain registrar:
+    
+    **Option A: Using Vercel nameservers** (Recommended)
+    - Update your domain's nameservers to Vercel's
+    
+    **Option B: Using A/CNAME records**
+    ```
+    Type: A
+    Name: @
+    Value: 76.76.21.21
+    
+    Type: CNAME
+    Name: www
+    Value: cname.vercel-dns.com
+    ```
+  </Step>
+  
+  <Step title="Update Supabase URLs">
+    Update redirect URLs in Supabase:
+    1. Go to **Authentication** → **URL Configuration**
+    2. Update **Site URL**: `https://your-domain.com`
+    3. Add to **Redirect URLs**: `https://your-domain.com/auth/callback`
+  </Step>
+  
+  <Step title="Verify SSL Certificate">
+    Vercel automatically provisions SSL certificates. Wait a few minutes for it to activate.
+  </Step>
+</Steps>
+
+## Multi-Language Routes
+
+The application supports three locales:
+
+- `es` (Spanish - default): `https://your-domain.com/turismo`
+- `en` (English): `https://your-domain.com/en/tourism`
+- `nah-MX` (Nahuatl): `https://your-domain.com/nah-MX/turismo`
+
+<Note>
+The default locale (`es`) doesn't include a prefix in the URL, following the `prefixDefaultLocale: false` configuration.
+</Note>
+
+## Continuous Deployment
+
+Vercel automatically deploys when you push to GitHub:
+
+```bash
+# Make changes
+git add .
+git commit -m "Update content"
+git push origin main
+
+# Vercel automatically builds and deploys
+```
+
+### Deployment Branches
+
+- **Production**: Deploys from `main` branch
+- **Preview**: Automatically created for pull requests
+- **Development**: You can configure additional branches
+
+## Environment-Specific Variables
+
+Set different values for different environments:
+
+<Steps>
+  <Step title="Go to Environment Variables">
+    In Vercel project settings, click **Environment Variables**
+  </Step>
+  
+  <Step title="Add Variable">
+    When adding a variable, select which environments should use it:
+    - **Production**: Live site
+    - **Preview**: Pull request previews
+    - **Development**: Local development (optional)
+  </Step>
+  
+  <Step title="Use Different Values">
+    You can set different values for each environment, useful for:
+    - Using a development Supabase project for previews
+    - Disabling analytics in preview environments
+    - Testing with sandbox API credentials
+  </Step>
+</Steps>
+
+## Monitoring and Analytics
+
+### View Deployment Logs
+
+<Steps>
+  <Step title="Access Logs">
+    Go to your project → **Deployments** → Click on a deployment
+  </Step>
+  
+  <Step title="Check Build Logs">
+    Review the **Building** section for build-time errors
+  </Step>
+  
+  <Step title="Check Runtime Logs">
+    Click **Runtime Logs** to see server-side errors
+  </Step>
+</Steps>
+
+### Enable Vercel Analytics
+
+<Steps>
+  <Step title="Install Package">
+    ```bash
+    npm install @vercel/analytics
+    ```
+  </Step>
+  
+  <Step title="Add to Layout">
+    ```astro
+    ---
+    // src/layouts/Layout.astro
+    import { inject } from '@vercel/analytics';
+    inject();
+    ---
+    ```
+  </Step>
+  
+  <Step title="Enable in Dashboard">
+    Go to your project settings → **Analytics** → Enable
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Build Fails
+
+**Check build logs** for specific errors:
+
+```bash
+# Common issues:
+- Missing environment variables
+- TypeScript errors
+- Import path issues
+```
+
+**Solution**: Fix the error locally first:
+```bash
+npm run build
+```
+
+### 404 Errors After Deploy
+
+**Possible causes**:
+- SSR routes not configured properly
+- Missing pages
+
+**Solution**: Verify `output: 'server'` in `astro.config.mjs`
+
+### Environment Variables Not Working
+
+1. Verify variable names match exactly (case-sensitive)
+2. Check if variables need `PUBLIC_` prefix
+3. Redeploy after adding/changing variables
+4. Clear cache and redeploy if needed
+
+### Slow Build Times
+
+**Optimize build**:
+1. Remove unused dependencies
+2. Use Vercel's build cache
+3. Optimize images before uploading
+
+## Vercel CLI (Optional)
+
+For advanced users, deploy from the command line:
+
+<Steps>
+  <Step title="Install Vercel CLI">
+    ```bash
+    npm install -g vercel
+    ```
+  </Step>
+  
+  <Step title="Login">
+    ```bash
+    vercel login
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    ```bash
+    # Deploy to preview
+    vercel
+    
+    # Deploy to production
+    vercel --prod
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+✅ **Recommended**:
+- Use environment-specific variables
+- Enable automatic deployments from main branch
+- Set up preview deployments for pull requests
+- Monitor build times and optimize as needed
+- Use custom domains with SSL
+- Enable Vercel Analytics for insights
+
+❌ **Avoid**:
+- Committing `.env` files
+- Using production credentials in preview environments
+- Deploying without testing locally first
+- Ignoring build warnings
+
+## Next Steps
+
+After deploying to Vercel:
+
+1. [Configure OAuth providers](/deployment/oauth) with your production URL
+2. [Set up storage buckets](/deployment/storage) in Supabase
+3. Test authentication flow on your live site
+4. Configure your [custom domain](/deployment/vercel#custom-domain-setup)

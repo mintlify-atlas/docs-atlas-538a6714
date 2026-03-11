@@ -1,0 +1,652 @@
+---
+title: Authentication System
+description: User authentication with Supabase Auth, OAuth providers, and session management
+---
+
+## Overview
+
+The Ayuntamiento de Zongolica platform uses **Supabase Auth** for secure user authentication and session management. The system supports multiple authentication methods to accommodate different user preferences.
+
+<CardGroup cols={2}>
+  <Card title="OAuth Providers" icon="lock">
+    Google and Facebook social login for quick access
+  </Card>
+  <Card title="Email/Password" icon="envelope">
+    Traditional email and password authentication
+  </Card>
+  <Card title="Session Management" icon="clock">
+    Secure JWT-based sessions with automatic refresh
+  </Card>
+  <Card title="Row Level Security" icon="shield">
+    Database-level security for user data isolation
+  </Card>
+</CardGroup>
+
+## Supabase Auth Integration
+
+The authentication system is built on top of Supabase Auth, providing enterprise-grade security out of the box.
+
+### Client Configuration
+
+Location: `src/lib/supabase.ts`
+
+```typescript src/lib/supabase.ts
+import { createClient } from '@supabase/supabase-js';
+
+// Environment variables
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+<Warning>
+  Never expose your Supabase service role key in client-side code. Always use the anon/public key.
+</Warning>
+
+### Environment Variables
+
+Configure in `.env`:
+
+```bash .env
+PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+These are prefixed with `PUBLIC_` to make them available in the browser.
+
+## OAuth Providers
+
+### Google OAuth
+
+The platform supports "Sign in with Google" for quick authentication.
+
+#### Setup Process
+
+<Steps>
+  <Step title="Create Google Cloud Project">
+    1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+    2. Create a new project or select an existing one
+    3. Enable the Google+ API
+  </Step>
+  
+  <Step title="Create OAuth Credentials">
+    1. Navigate to **Credentials** in the left sidebar
+    2. Click **Create Credentials > OAuth 2.0 Client ID**
+    3. Choose **Web application**
+    4. Add authorized redirect URI:
+       ```
+       https://your-project.supabase.co/auth/v1/callback
+       ```
+    5. Copy the **Client ID** and **Client Secret**
+  </Step>
+  
+  <Step title="Configure in Supabase">
+    1. Go to your Supabase project dashboard
+    2. Navigate to **Authentication > Providers**
+    3. Find **Google** and toggle it on
+    4. Paste your **Client ID** and **Client Secret**
+    5. Click **Save**
+  </Step>
+</Steps>
+
+#### Implementation
+
+```typescript src/lib/supabase.ts
+export async function signInWithGoogle(redirectPath = '/turismo?onboarding=1') {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback?return_url=${encodeURIComponent(redirectPath)}`
+    }
+  });
+  return { data, error };
+}
+```
+
+Usage in components:
+
+```typescript
+import { signInWithGoogle } from '@/lib/supabase';
+
+async function handleGoogleLogin() {
+  const { error } = await signInWithGoogle('/turismo');
+  if (error) {
+    console.error('Login failed:', error.message);
+  }
+}
+```
+
+### Facebook OAuth
+
+Similar setup process for Facebook authentication.
+
+#### Setup Process
+
+<Steps>
+  <Step title="Create Facebook App">
+    1. Go to [developers.facebook.com](https://developers.facebook.com)
+    2. Click **My Apps > Create App**
+    3. Choose **Consumer** as app type
+    4. Fill in app details
+  </Step>
+  
+  <Step title="Add Facebook Login Product">
+    1. In your app dashboard, click **Add Product**
+    2. Find **Facebook Login** and click **Set Up**
+    3. Choose **Web** platform
+    4. Add valid OAuth redirect URI:
+       ```
+       https://your-project.supabase.co/auth/v1/callback
+       ```
+  </Step>
+  
+  <Step title="Configure in Supabase">
+    1. Go to **Settings > Basic** in Facebook app
+    2. Copy **App ID** and **App Secret**
+    3. In Supabase: **Authentication > Providers > Facebook**
+    4. Enable Facebook and paste credentials
+    5. Click **Save**
+  </Step>
+</Steps>
+
+## Email/Password Authentication
+
+### Sign Up
+
+```typescript src/lib/supabase.ts
+export async function signUpWithEmail(
+  email: string, 
+  password: string, 
+  name?: string
+) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: name || email.split('@')[0]
+      }
+    }
+  });
+  return { data, error };
+}
+```
+
+### Sign In
+
+```typescript src/lib/supabase.ts
+export async function signInWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+  return { data, error };
+}
+```
+
+### Usage Example
+
+```typescript React Component
+import { signInWithEmail, signUpWithEmail } from '@/lib/supabase';
+import { useState } from 'react';
+
+function LoginForm() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    
+    const authFn = isSignUp ? signUpWithEmail : signInWithEmail;
+    const { error } = await authFn(email, password);
+    
+    if (error) {
+      alert(error.message);
+    } else {
+      window.location.href = '/turismo';
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input 
+        type="email" 
+        value={email} 
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Email"
+        required
+      />
+      <input 
+        type="password" 
+        value={password} 
+        onChange={e => setPassword(e.target.value)}
+        placeholder="Password"
+        required
+      />
+      <button type="submit">
+        {isSignUp ? 'Sign Up' : 'Sign In'}
+      </button>
+      <button type="button" onClick={() => setIsSignUp(!isSignUp)}>
+        {isSignUp ? 'Already have an account?' : 'Need an account?'}
+      </button>
+    </form>
+  );
+}
+```
+
+## OAuth Callback Handler
+
+Location: `src/pages/auth/callback.astro`
+
+Handles the OAuth redirect after successful authentication:
+
+```astro src/pages/auth/callback.astro
+---
+export const prerender = false;
+
+const { searchParams } = Astro.url;
+const returnUrl = searchParams.get('return_url') || '/turismo';
+
+// Supabase automatically handles the token exchange
+// Just redirect to the intended destination
+---
+
+<script define:vars={{ returnUrl }}>
+  // Redirect after a brief moment to ensure session is set
+  setTimeout(() => {
+    window.location.href = returnUrl;
+  }, 100);
+</script>
+
+<div class="flex items-center justify-center min-h-screen">
+  <div class="text-center">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff8200] mx-auto"></div>
+    <p class="mt-4 text-gray-600">Signing you in...</p>
+  </div>
+</div>
+```
+
+## Session Management
+
+### Getting Current User
+
+```typescript src/lib/supabase.ts
+export async function getCurrentUser() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+```
+
+### Checking Authentication Status
+
+In Astro pages:
+
+```astro
+---
+import { supabase } from '@/lib/supabase';
+
+const { data: { session } } = await supabase.auth.getSession();
+const user = session?.user;
+
+if (!user) {
+  return Astro.redirect('/auth/login');
+}
+---
+```
+
+In React components:
+
+```typescript
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+function useAuth() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return { user, loading };
+}
+```
+
+### Sign Out
+
+```typescript src/lib/supabase.ts
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  return { error };
+}
+```
+
+Usage:
+
+```typescript
+import { signOut } from '@/lib/supabase';
+
+async function handleSignOut() {
+  await signOut();
+  window.location.href = '/';
+}
+```
+
+## User Profiles
+
+Location: `src/lib/supabase.ts`
+
+### Profile Schema
+
+```typescript
+export interface UserProfile {
+  id: string;                    // Matches auth.users.id
+  email: string;
+  full_name: string;
+  avatar_url: string;
+  provider: string;              // 'google', 'facebook', 'email'
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Database Table
+
+```sql
+CREATE TABLE user_profiles (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  email TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  provider TEXT,
+  onboarding_completed BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+### Profile Management Functions
+
+```typescript src/lib/supabase.ts
+export async function getUserProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  return { data: data as UserProfile | null, error };
+}
+
+export async function upsertUserProfile(
+  profile: Partial<UserProfile> & { id: string }
+) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .upsert([{ ...profile, updated_at: new Date().toISOString() }])
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function markOnboardingCompleted(userId: string) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update({ 
+      onboarding_completed: true, 
+      updated_at: new Date().toISOString() 
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+  return { data, error };
+}
+```
+
+## Protected Routes
+
+### Server-Side Protection
+
+Protect pages at the server level:
+
+```astro src/pages/turismo/perfil.astro
+---
+import { supabase } from '@/lib/supabase';
+import Layout from '@/layouts/Layout.astro';
+
+export const prerender = false;
+
+// Check authentication
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  return Astro.redirect('/auth/login?redirect=/turismo/perfil');
+}
+
+const user = session.user;
+---
+
+<Layout title="Mi Perfil">
+  <h1>Welcome, {user.email}</h1>
+  <!-- Profile content -->
+</Layout>
+```
+
+### Client-Side Protection
+
+For React components:
+
+```typescript
+import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
+function ProtectedComponent() {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = '/auth/login';
+      }
+    });
+  }, []);
+
+  return <div>Protected content</div>;
+}
+```
+
+## Row Level Security (RLS)
+
+Supabase RLS ensures users can only access their own data.
+
+### User Profiles Policies
+
+```sql
+-- Users can view their own profile
+CREATE POLICY "Users can view own profile" ON user_profiles
+  FOR SELECT USING (auth.uid() = id);
+
+-- Users can update their own profile
+CREATE POLICY "Users can update own profile" ON user_profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Users can insert their own profile
+CREATE POLICY "Users can insert own profile" ON user_profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+```
+
+### User Preferences Policies
+
+```sql
+-- Users can view their own preferences
+CREATE POLICY "Users can view own preferences" ON user_preferences
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Users can insert their own preferences
+CREATE POLICY "Users can insert own preferences" ON user_preferences
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own preferences
+CREATE POLICY "Users can update own preferences" ON user_preferences
+  FOR UPDATE USING (auth.uid() = user_id);
+```
+
+### User Routes Policies
+
+```sql
+-- Anyone can view routes (for sharing)
+CREATE POLICY "Anyone can view routes" ON user_routes
+  FOR SELECT USING (true);
+
+-- Users can insert their own routes
+CREATE POLICY "Users can insert own routes" ON user_routes
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own routes
+CREATE POLICY "Users can update own routes" ON user_routes
+  FOR UPDATE USING (auth.uid() = user_id);
+```
+
+## Email Configuration
+
+### Enable Email Provider
+
+<Steps>
+  <Step title="Enable in Supabase">
+    1. Go to **Authentication > Providers**
+    2. Find **Email** and toggle it on
+    3. Configure settings:
+       - **Confirm email**: Enable for production, disable for development
+       - **Secure email change**: Recommended
+       - **Double confirm email**: Optional
+  </Step>
+  
+  <Step title="Customize Email Templates (Optional)">
+    1. Go to **Authentication > Email Templates**
+    2. Customize:
+       - Confirmation email
+       - Magic link email
+       - Password reset email
+    3. Add your branding and custom copy
+  </Step>
+</Steps>
+
+### Email Verification Flow
+
+When email confirmation is enabled:
+
+1. User signs up
+2. Supabase sends confirmation email
+3. User clicks link in email
+4. User is redirected to site with confirmed account
+5. Profile is created and onboarding begins
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use HTTPS Only" icon="lock">
+    Always enforce SSL/TLS encryption in production
+  </Card>
+  
+  <Card title="Validate Redirects" icon="shield">
+    Sanitize redirect URLs to prevent open redirect vulnerabilities
+  </Card>
+  
+  <Card title="Rate Limiting" icon="gauge">
+    Enable Supabase rate limiting to prevent abuse
+  </Card>
+  
+  <Card title="Strong Passwords" icon="key">
+    Enforce minimum password requirements
+  </Card>
+</CardGroup>
+
+### Redirect Validation
+
+```typescript
+function sanitizeRedirectUrl(url: string): string {
+  const allowedPaths = ['/turismo', '/perfil', '/mi-ruta'];
+  const parsed = new URL(url, window.location.origin);
+  
+  // Only allow same-origin redirects
+  if (parsed.origin !== window.location.origin) {
+    return '/turismo';
+  }
+  
+  // Optionally restrict to specific paths
+  const path = parsed.pathname;
+  if (!allowedPaths.some(p => path.startsWith(p))) {
+    return '/turismo';
+  }
+  
+  return url;
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="OAuth redirect not working">
+    **Symptoms:** User is not redirected after OAuth login
+    
+    **Solutions:**
+    1. Verify redirect URI matches exactly in Google/Facebook console
+    2. Check that callback page exists at `/auth/callback`
+    3. Ensure `return_url` parameter is properly encoded
+    4. Check browser console for errors
+  </Accordion>
+  
+  <Accordion title="Session not persisting">
+    **Symptoms:** User is logged out on page refresh
+    
+    **Solutions:**
+    1. Check that Supabase client is properly initialized
+    2. Verify cookies are enabled in browser
+    3. Ensure `localStorage` is available
+    4. Check for CORS issues in browser console
+  </Accordion>
+  
+  <Accordion title="RLS policies blocking queries">
+    **Symptoms:** Queries return empty results or permission errors
+    
+    **Solutions:**
+    1. Verify RLS policies are correctly configured
+    2. Check that `auth.uid()` is available in policies
+    3. Test policies in Supabase SQL editor
+    4. Ensure user is properly authenticated before queries
+  </Accordion>
+  
+  <Accordion title="Email confirmation not arriving">
+    **Symptoms:** Users don't receive confirmation emails
+    
+    **Solutions:**
+    1. Check spam/junk folder
+    2. Verify email provider in Supabase (default is limited)
+    3. Configure custom SMTP in Supabase settings
+    4. Disable email confirmation for development
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tourism System" icon="compass" href="/features/tourism-system">
+    Learn about the onboarding flow and user features
+  </Card>
+  <Card title="Government Portal" icon="landmark" href="/features/government-portal">
+    Explore public-facing government pages
+  </Card>
+</CardGroup>

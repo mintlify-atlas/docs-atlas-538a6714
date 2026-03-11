@@ -1,122 +1,153 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Ayuntamiento de Zongolica",
+  "theme": "almond",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#b47924",
+    "light": "#b47924",
+    "dark": "#5c3c1c"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/12da0c6d-41fd-4ea6-8505-e40b4d3f1e91.svg",
+  "logo": {
+    "light": "https://media.brand.dev/e261fd3b-e180-4c93-9627-deabe94363da.webp",
+    "dark": "https://media.brand.dev/e261fd3b-e180-4c93-9627-deabe94363da.webp"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Jesus-Puertos/h-ayuntamiento"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Jesus-Puertos/h-ayuntamiento"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Overview",
         "groups": [
           {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "installation"]
           },
           {
-            "group": "Customization",
+            "group": "Portal Features",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "features/government-portal",
+              "features/tourism-system",
+              "features/multilingual",
+              "features/authentication"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Tourism System",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
+            "pages": ["tourism/overview", "tourism/xochitlanis"]
+          },
+          {
+            "group": "User Journey",
             "pages": [
-              "api-reference/introduction"
+              "tourism/onboarding",
+              "tourism/recommendations",
+              "tourism/badges",
+              "tourism/tickets"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Attractions",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "tourism/attractions",
+              "tourism/routes",
+              "tourism/events"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/architecture",
+              "development/tech-stack",
+              "development/folder-structure"
+            ]
+          },
+          {
+            "group": "Core Systems",
+            "pages": [
+              "development/supabase",
+              "development/authentication",
+              "development/i18n"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "development/components/overview",
+              "development/components/tourism",
+              "development/components/ui"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/tourism",
+              "api/chat"
+            ]
+          },
+          {
+            "group": "Data Types",
+            "pages": [
+              "api/types/user",
+              "api/types/tourism",
+              "api/types/government"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "api/database/schema",
+              "api/database/migrations",
+              "api/database/supabase-client"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Deployment",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "deployment/environment-variables",
+              "deployment/vercel",
+              "deployment/supabase-setup"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "deployment/oauth",
+              "deployment/database",
+              "deployment/storage"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

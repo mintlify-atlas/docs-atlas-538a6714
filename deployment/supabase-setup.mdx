@@ -1,0 +1,433 @@
+---
+title: Supabase Setup
+description: Set up Supabase database, authentication, and storage for your application
+---
+
+## Overview
+
+Supabase provides the backend infrastructure for the Ayuntamiento de Zongolica application, including PostgreSQL database, authentication, and file storage. This guide walks you through the complete setup process.
+
+## Create Supabase Project
+
+<Steps>
+  <Step title="Sign Up for Supabase">
+    Go to [app.supabase.com](https://app.supabase.com) and create a free account
+  </Step>
+  
+  <Step title="Create New Project">
+    1. Click **New Project**
+    2. Choose an organization (or create one)
+    3. Enter project details:
+       - **Name**: `zongolica-turismo` (or your preferred name)
+       - **Database Password**: Generate a strong password and save it securely
+       - **Region**: Choose closest to your users (e.g., `South America (São Paulo)`)
+    4. Click **Create new project**
+  </Step>
+  
+  <Step title="Wait for Setup">
+    Project creation takes 1-2 minutes. Wait for the green "Active" status.
+  </Step>
+</Steps>
+
+## Run SQL Setup Script
+
+The application includes a complete SQL script to create all necessary tables, indexes, and security policies.
+
+<Steps>
+  <Step title="Open SQL Editor">
+    In your Supabase dashboard, click **SQL Editor** in the left sidebar
+  </Step>
+  
+  <Step title="Create New Query">
+    Click **New Query** to open a blank editor
+  </Step>
+  
+  <Step title="Copy Setup Script">
+    Copy the entire contents of `supabase-setup.sql` from your project:
+    
+    ```sql
+    -- Main tables
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+      experiencia TEXT[] NOT NULL,
+      duracion TEXT NOT NULL,
+      dificultad TEXT NOT NULL,
+      grupo TEXT NOT NULL,
+      intereses TEXT[] NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS user_routes (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+      route_name TEXT NOT NULL,
+      atractivos TEXT[] NOT NULL,
+      ticket_url TEXT NOT NULL,
+      share_code TEXT UNIQUE NOT NULL,
+      badges TEXT[] DEFAULT '{}',
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    );
+    
+    CREATE TABLE IF NOT EXISTS user_badges (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+      badge_type TEXT NOT NULL,
+      unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      UNIQUE(user_id, badge_type)
+    );
+    ```
+  </Step>
+  
+  <Step title="Run the Script">
+    Click **Run** (or press Ctrl+Enter) to execute the script. You should see:
+    ```
+    Success. No rows returned
+    ```
+  </Step>
+  
+  <Step title="Verify Tables">
+    Click **Table Editor** in the sidebar and confirm these tables exist:
+    - `user_preferences`
+    - `user_routes`
+    - `user_badges`
+  </Step>
+</Steps>
+
+## Database Schema
+
+### user_preferences Table
+
+Stores user onboarding responses:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key to `auth.users` |
+| `experiencia` | TEXT[] | Array of experience types (aventura, cultura, etc.) |
+| `duracion` | TEXT | Trip duration preference |
+| `dificultad` | TEXT | Difficulty level preference |
+| `grupo` | TEXT | Travel group type (familia, pareja, etc.) |
+| `intereses` | TEXT[] | Array of interests (cascadas, miradores, etc.) |
+| `created_at` | TIMESTAMP | Creation timestamp |
+
+### user_routes Table
+
+Stores generated personalized routes:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key to `auth.users` |
+| `route_name` | TEXT | Generated route name |
+| `atractivos` | TEXT[] | Array of recommended attractions |
+| `ticket_url` | TEXT | URL to generated ticket image |
+| `share_code` | TEXT | Unique sharing code (indexed) |
+| `badges` | TEXT[] | Array of unlocked badge IDs |
+| `created_at` | TIMESTAMP | Creation timestamp |
+
+### user_badges Table
+
+Tracks unlocked achievement badges:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `user_id` | UUID | Foreign key to `auth.users` |
+| `badge_type` | TEXT | Badge identifier |
+| `unlocked_at` | TIMESTAMP | When badge was unlocked |
+
+<Note>
+All tables use UUID primary keys and foreign key constraints to maintain data integrity.
+</Note>
+
+## Configure Row Level Security (RLS)
+
+The setup script automatically configures RLS policies for data security.
+
+### user_preferences Policies
+
+```sql
+-- Users can only see their own preferences
+CREATE POLICY "Los usuarios pueden ver sus propias preferencias"
+  ON user_preferences FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can create their own preferences
+CREATE POLICY "Los usuarios pueden crear sus propias preferencias"
+  ON user_preferences FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own preferences
+CREATE POLICY "Los usuarios pueden actualizar sus propias preferencias"
+  ON user_preferences FOR UPDATE
+  USING (auth.uid() = user_id);
+```
+
+### user_routes Policies
+
+```sql
+-- Anyone can view routes (for sharing functionality)
+CREATE POLICY "Todos pueden ver rutas (para compartir)"
+  ON user_routes FOR SELECT
+  USING (true);
+
+-- Users can create their own routes
+CREATE POLICY "Los usuarios pueden crear sus propias rutas"
+  ON user_routes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own routes
+CREATE POLICY "Los usuarios pueden actualizar sus propias rutas"
+  ON user_routes FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Users can delete their own routes
+CREATE POLICY "Los usuarios pueden eliminar sus propias rutas"
+  ON user_routes FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+### user_badges Policies
+
+```sql
+-- Anyone can view badges
+CREATE POLICY "Los usuarios pueden ver todas las insignias"
+  ON user_badges FOR SELECT
+  USING (true);
+
+-- Users can create their own badges
+CREATE POLICY "Los usuarios pueden crear sus propias insignias"
+  ON user_badges FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+```
+
+<Warning>
+Row Level Security is critical for data protection. Never disable RLS on tables containing user data.
+</Warning>
+
+## Create Storage Buckets
+
+Storage buckets hold generated ticket images.
+
+<Steps>
+  <Step title="Verify Tickets Bucket">
+    1. Go to **Storage** in the left sidebar
+    2. Check if the `tickets` bucket exists (created by SQL script)
+  </Step>
+  
+  <Step title="Create Manually (If Needed)">
+    If the bucket doesn't exist:
+    1. Click **New bucket**
+    2. Name: `tickets`
+    3. Mark as **Public bucket** ✅
+    4. Click **Create bucket**
+  </Step>
+  
+  <Step title="Configure Bucket Settings">
+    Click the bucket settings and verify:
+    - **Public**: Yes
+    - **File size limit**: 5 MB (default is fine)
+    - **Allowed MIME types**: `image/*`
+  </Step>
+</Steps>
+
+### Storage Policies
+
+The setup script creates these storage policies:
+
+```sql
+-- Anyone can view public tickets
+CREATE POLICY "Todos pueden ver tickets públicos"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'tickets');
+
+-- Authenticated users can upload tickets
+CREATE POLICY "Los usuarios autenticados pueden subir tickets"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'tickets' 
+    AND auth.role() = 'authenticated'
+  );
+
+-- Users can update their own tickets
+CREATE POLICY "Los usuarios pueden actualizar sus propios tickets"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Users can delete their own tickets
+CREATE POLICY "Los usuarios pueden eliminar sus propios tickets"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'tickets' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+## Get API Credentials
+
+<Steps>
+  <Step title="Navigate to API Settings">
+    Click **Settings** → **API** in the Supabase dashboard
+  </Step>
+  
+  <Step title="Copy Project URL">
+    Copy the **Project URL**:
+    ```
+    https://abcdefghijk.supabase.co
+    ```
+    This becomes your `PUBLIC_SUPABASE_URL`
+  </Step>
+  
+  <Step title="Copy Anon Key">
+    Copy the **anon/public** key:
+    ```
+    eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+    This becomes your `PUBLIC_SUPABASE_ANON_KEY`
+  </Step>
+  
+  <Step title="Add to Environment">
+    Add these to your `.env` file and deployment platform:
+    ```bash
+    PUBLIC_SUPABASE_URL=https://abcdefghijk.supabase.co
+    PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Never use or expose the `service_role` key in client-side code. It bypasses all RLS policies.
+</Warning>
+
+## Enable Authentication
+
+<Steps>
+  <Step title="Open Authentication Settings">
+    Click **Authentication** → **Providers** in the sidebar
+  </Step>
+  
+  <Step title="Enable Email Authentication">
+    1. Click on **Email**
+    2. Ensure it's enabled ✅
+    3. For development, you can disable "Confirm email" for faster testing
+    4. Click **Save**
+  </Step>
+  
+  <Step title="Configure Site URL">
+    Go to **Authentication** → **URL Configuration**:
+    - **Site URL**: `http://localhost:4321` (development) or your production URL
+    - **Redirect URLs**: Add both development and production callback URLs:
+      ```
+      http://localhost:4321/auth/callback
+      https://your-domain.com/auth/callback
+      ```
+  </Step>
+</Steps>
+
+## Database Indexes
+
+The setup script creates performance indexes:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id 
+  ON user_preferences(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_routes_user_id 
+  ON user_routes(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_routes_share_code 
+  ON user_routes(share_code);
+
+CREATE INDEX IF NOT EXISTS idx_user_badges_user_id 
+  ON user_badges(user_id);
+```
+
+These indexes optimize queries for:
+- Looking up user data by `user_id`
+- Finding shared routes by `share_code`
+- Retrieving user badges efficiently
+
+## Useful Database Functions
+
+The setup script includes a helper function:
+
+```sql
+CREATE OR REPLACE FUNCTION get_user_stats(user_uuid UUID)
+RETURNS JSON AS $$
+DECLARE
+  result JSON;
+BEGIN
+  SELECT json_build_object(
+    'total_routes', (SELECT COUNT(*) FROM user_routes WHERE user_id = user_uuid),
+    'total_badges', (SELECT COUNT(*) FROM user_badges WHERE user_id = user_uuid),
+    'latest_route', (SELECT route_name FROM user_routes WHERE user_id = user_uuid ORDER BY created_at DESC LIMIT 1),
+    'created_at', (SELECT created_at FROM user_routes WHERE user_id = user_uuid ORDER BY created_at ASC LIMIT 1)
+  ) INTO result;
+  
+  RETURN result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+Use it to get user statistics:
+
+```typescript
+const { data } = await supabase.rpc('get_user_stats', {
+  user_uuid: userId
+});
+```
+
+## Free Tier Limits
+
+Supabase free tier includes:
+
+- ✅ **Database**: 500 MB
+- ✅ **Storage**: 1 GB
+- ✅ **Bandwidth**: 2 GB/month
+- ✅ **Authentication users**: Unlimited
+- ✅ **API requests**: Unlimited
+- ✅ **Edge Functions**: 500K invocations/month
+
+<Note>
+The free tier is sufficient for development and small production deployments. Consider upgrading to Pro ($25/month) for production sites with higher traffic.
+</Note>
+
+## Troubleshooting
+
+### RLS Policy Errors
+
+**Error**: `new row violates row-level security policy`
+
+**Solution**:
+1. Verify the SQL script ran completely
+2. Check that RLS is enabled on all tables
+3. Ensure policies were created without errors
+
+### Storage Upload Fails
+
+**Error**: `new row violates row-level security policy for table "objects"`
+
+**Solution**:
+1. Verify the `tickets` bucket is public
+2. Check storage policies were created
+3. Ensure user is authenticated before uploading
+
+### Authentication Not Working
+
+**Solution**:
+1. Verify email provider is enabled
+2. Check redirect URLs match exactly
+3. Ensure Site URL is configured correctly
+
+## Next Steps
+
+After completing Supabase setup:
+
+1. [Configure environment variables](/deployment/environment-variables)
+2. [Set up OAuth providers](/deployment/oauth)
+3. [Deploy to Vercel](/deployment/vercel)
+4. Test the authentication flow

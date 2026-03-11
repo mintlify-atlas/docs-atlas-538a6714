@@ -1,0 +1,482 @@
+---
+title: 'Tourism Data Types'
+description: 'TypeScript interfaces for tourist attractions, routes, and services'
+icon: 'map-location-dot'
+---
+
+## Overview
+
+This page documents all tourism-related TypeScript types used in the Zongolica application, including attractions, routes, service providers, and related data structures.
+
+## Core Types
+
+### Atractivo
+
+Represents a tourist attraction or place of interest.
+
+```typescript
+interface Atractivo {
+  slug: string;
+  titulo: string;
+  subtitulo: string;
+  descripcionCorta: string;
+  descripcionLarga: string[];
+  imagen: string;
+  galeria?: string[];
+  categoria: CategoriaAtractivo;
+  ubicacion?: string;
+  coordenadas?: Coordenadas;
+  horarios?: InfoBlock[];
+  costos?: InfoBlock[];
+  stats?: Stat[];
+  cta?: CTA;
+  duracionSugerida?: string;
+  dificultad?: NivelDificultad;
+  recomendaciones?: string[];
+  accesibilidad?: InfoAccesibilidad;
+  seguridadTips?: string[];
+  queTraer?: string[];
+  mejorEpoca?: string;
+  pdfGuia?: string;
+  ultimaActualizacion?: string;
+  destacado?: boolean;
+  familiaFriendly?: boolean;
+}
+```
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly identifier (e.g., "cascada-de-atlahuitzia")
+</ResponseField>
+
+<ResponseField name="titulo" type="string" required>
+  Attraction name
+</ResponseField>
+
+<ResponseField name="subtitulo" type="string" required>
+  Short subtitle or tagline
+</ResponseField>
+
+<ResponseField name="descripcionCorta" type="string" required>
+  Brief description for cards and previews (1-2 sentences)
+</ResponseField>
+
+<ResponseField name="descripcionLarga" type="string[]" required>
+  Detailed description paragraphs
+</ResponseField>
+
+<ResponseField name="imagen" type="string" required>
+  Main image URL or path
+</ResponseField>
+
+<ResponseField name="galeria" type="string[]">
+  Additional image URLs for photo gallery
+</ResponseField>
+
+<ResponseField name="categoria" type="CategoriaAtractivo" required>
+  Category of attraction. See [CategoriaAtractivo](#categoriaatractivo)
+</ResponseField>
+
+<ResponseField name="ubicacion" type="string">
+  Location description (e.g., "Centro de Zongolica, Veracruz")
+</ResponseField>
+
+<ResponseField name="coordenadas" type="Coordenadas">
+  Geographic coordinates `{ lat: number, lng: number }`
+</ResponseField>
+
+<ResponseField name="horarios" type="InfoBlock[]">
+  Operating hours and access information
+</ResponseField>
+
+<ResponseField name="costos" type="InfoBlock[]">
+  Pricing information
+</ResponseField>
+
+<ResponseField name="stats" type="Stat[]">
+  Key statistics displayed as badges
+</ResponseField>
+
+<ResponseField name="cta" type="CTA">
+  Call-to-action button (e.g., "Ver en Google Maps")
+</ResponseField>
+
+<ResponseField name="duracionSugerida" type="string">
+  Suggested visit duration (e.g., "1-2 horas")
+</ResponseField>
+
+<ResponseField name="dificultad" type="NivelDificultad">
+  Physical difficulty level: "Baja" | "Media" | "Alta" | "Extrema"
+</ResponseField>
+
+<ResponseField name="recomendaciones" type="string[]">
+  Visitor recommendations
+</ResponseField>
+
+<ResponseField name="accesibilidad" type="InfoAccesibilidad">
+  Accessibility features (wheelchairs, parking, restrooms, etc.)
+</ResponseField>
+
+<ResponseField name="seguridadTips" type="string[]">
+  Safety tips
+</ResponseField>
+
+<ResponseField name="queTraer" type="string[]">
+  What to bring
+</ResponseField>
+
+<ResponseField name="mejorEpoca" type="string">
+  Best time to visit
+</ResponseField>
+
+<ResponseField name="pdfGuia" type="string">
+  URL to downloadable PDF guide
+</ResponseField>
+
+<ResponseField name="ultimaActualizacion" type="string">
+  Last update date (ISO format)
+</ResponseField>
+
+<ResponseField name="destacado" type="boolean">
+  Whether attraction is featured
+</ResponseField>
+
+<ResponseField name="familiaFriendly" type="boolean">
+  Whether attraction is family-friendly
+</ResponseField>
+
+### Example
+
+```json
+{
+  "slug": "la-pergola",
+  "titulo": "La Pérgola",
+  "subtitulo": "Capilla y mirador en el cerro Tlaltiticuinco",
+  "descripcionCorta": "Estructura arquitectónica de 1957 ubicada en lo alto del cerro.",
+  "descripcionLarga": [
+    "La Pérgola es una estructura arquitectónica exterior con columnas...",
+    "Fue diseñada por el padre Mariano Arce Morales..."
+  ],
+  "imagen": "/turismo/atractivos/01-la-pergola/img-1.jpg",
+  "categoria": "Arquitectura",
+  "ubicacion": "Cerro Tlaltiticuinco, Zongolica, Veracruz",
+  "stats": [
+    { "label": "Año", "value": "1957", "icon": "🏛️" },
+    { "label": "Tipo", "value": "Capilla", "icon": "⛪" }
+  ],
+  "duracionSugerida": "1-2 horas",
+  "dificultad": "Media",
+  "destacado": false,
+  "familiaFriendly": true
+}
+```
+
+---
+
+## UserRoute
+
+User-generated tourist route stored in the `user_routes` table.
+
+```typescript
+interface UserRoute {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  route_name: string;
+  atractivos: string[];
+  ticket_url: string;
+  share_code: string;
+  badges: string[];
+  created_at: string;
+}
+```
+
+<ResponseField name="id" type="string">
+  UUID - Primary key (auto-generated)
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID - References user who created the route
+</ResponseField>
+
+<ResponseField name="user_name" type="string">
+  Display name of route creator
+</ResponseField>
+
+<ResponseField name="route_name" type="string">
+  Name given to the route by the user
+</ResponseField>
+
+<ResponseField name="atractivos" type="string[]">
+  Array of attraction slugs included in the route
+</ResponseField>
+
+<ResponseField name="ticket_url" type="string">
+  URL to the generated ticket/itinerary page
+</ResponseField>
+
+<ResponseField name="share_code" type="string">
+  Unique code for sharing the route (used in URLs)
+</ResponseField>
+
+<ResponseField name="badges" type="string[]">
+  Array of badge IDs earned with this route
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of route creation
+</ResponseField>
+
+### Example
+
+```json
+{
+  "id": "d4e5f6a7-b8c9-0123-def4-567890123456",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "user_name": "Juan Pérez",
+  "route_name": "Aventura en la Sierra",
+  "atractivos": ["la-pergola", "cascada-de-atlahuitzia", "el-calvario"],
+  "ticket_url": "https://zongolica.gob.mx/ruta/abc123",
+  "share_code": "abc123",
+  "badges": ["aventurero", "explorador"],
+  "created_at": "2024-03-15T14:30:00.000Z"
+}
+```
+
+---
+
+## UserBadge
+
+User achievement/badge stored in the `user_badges` table.
+
+```typescript
+interface UserBadge {
+  id: string;
+  user_id: string;
+  badge_type: string;
+  unlocked_at: string;
+}
+```
+
+<ResponseField name="id" type="string">
+  UUID - Primary key (auto-generated)
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID - References user who unlocked the badge
+</ResponseField>
+
+<ResponseField name="badge_type" type="string">
+  Badge identifier (e.g., "aventurero", "explorador", "guardian_naturaleza")
+</ResponseField>
+
+<ResponseField name="unlocked_at" type="string">
+  ISO 8601 timestamp when badge was unlocked
+</ResponseField>
+
+### Example
+
+```json
+{
+  "id": "e5f6a7b8-c9d0-1234-ef56-789012345678",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "badge_type": "aventurero",
+  "unlocked_at": "2024-03-15T15:00:00.000Z"
+}
+```
+
+---
+
+## Supporting Types
+
+### CategoriaAtractivo
+
+Category types for tourist attractions.
+
+```typescript
+type CategoriaAtractivo =
+  | "Naturaleza"
+  | "Cultura"
+  | "Gastronomía"
+  | "Miradores"
+  | "Senderismo"
+  | "Cascadas"
+  | "Arquitectura"
+  | "Centro Histórico"
+  | "Artesanías"
+  | "Otro";
+```
+
+### NivelDificultad
+
+Difficulty levels for routes and attractions.
+
+```typescript
+type NivelDificultad = "Baja" | "Media" | "Alta" | "Extrema";
+```
+
+### InfoBlock
+
+Structured information block with title and items.
+
+```typescript
+interface InfoBlock {
+  titulo: string;
+  items: string[];
+}
+```
+
+### Stat
+
+Key statistic or data point displayed as a badge.
+
+```typescript
+interface Stat {
+  label: string;
+  value: string;
+  icon?: string;
+}
+```
+
+### CTA
+
+Call-to-action button configuration.
+
+```typescript
+interface CTA {
+  label: string;
+  href: string;
+  icon?: string;
+  variant?: "primary" | "secondary" | "outline";
+}
+```
+
+### Coordenadas
+
+Geographic coordinates.
+
+```typescript
+interface Coordenadas {
+  lat: number;
+  lng: number;
+}
+```
+
+### InfoAccesibilidad
+
+Accessibility information for attractions.
+
+```typescript
+interface InfoAccesibilidad {
+  sillasRuedas: boolean;
+  estacionamiento: boolean;
+  sanitarios: boolean;
+  señalizacion: boolean;
+  guiaAdaptada: boolean;
+  notas?: string;
+}
+```
+
+---
+
+## Route Types
+
+### RutaTuristica
+
+Predefined tourist route.
+
+```typescript
+interface RutaTuristica {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string;
+  descripcionLarga?: string[];
+  insignia: string;
+  color: string;
+  colorSecundario?: string;
+  atractivos: string[];
+  duracion: string;
+  dificultad: NivelDificultad;
+  distancia?: string;
+  tipo: "Corta" | "Día completo" | "Familiar" | "Aventura" | "Cultural" | "Gastronómica";
+  incluye?: string[];
+  recomendaciones?: string[];
+  imagen?: string;
+  destacada?: boolean;
+}
+```
+
+---
+
+## Service Provider Types
+
+### PrestadorServicio
+
+Tourism service provider (guides, restaurants, hotels, etc.).
+
+```typescript
+interface PrestadorServicio {
+  id: string;
+  slug: string;
+  nombre: string;
+  tipo: TipoServicio;
+  categoria: CategoriaPrestador;
+  subcategorias?: string[];
+  municipio?: string;
+  estado?: string;
+  direccion?: string;
+  googleMaps?: string;
+  coordenadas?: Coordenadas;
+  contacto?: string;
+  telefono?: string;
+  whatsapp?: string;
+  email?: string;
+  instagram?: string;
+  facebook?: string;
+  sitioWeb?: string;
+  descripcion: string;
+  descripcionLarga?: string[];
+  resena?: string;
+  imagen?: string;
+  fotografias?: string[];
+  icono?: string;
+  logo?: string;
+  servicios?: string[];
+  productosDestacados?: string[];
+  amenidades?: string[];
+  menu?: MenuSection[];
+  certificaciones?: string[];
+  tags?: string[];
+  calificacion?: number;
+  destacado?: boolean;
+  publicado?: boolean;
+  orden?: number;
+}
+```
+
+### TipoServicio
+
+```typescript
+type TipoServicio = 
+  | "Guías" | "Hospedaje" | "Transporte" | "Alimentos" 
+  | "Artesanías" | "Aventura" | "cafeteria" | "restaurante" 
+  | "hotel" | "guia_turistico" | "experiencia" | "artesano" 
+  | "operador" | "recreacion" | "otro";
+```
+
+### CategoriaPrestador
+
+```typescript
+type CategoriaPrestador = 
+  | "gastronomia" | "hospedaje" | "naturaleza" | "cultura" 
+  | "aventura" | "bienestar" | "compras" | "servicios" 
+  | "ecoturismo";
+```
+
+---
+
+## Related Documentation
+
+- [User Data Types](/api/types/user) - User profiles and preferences
+- [Tourism API Functions](/api/tourism) - Functions for working with tourism data
+- [Database Schema](/api/database/schema) - Complete database structure

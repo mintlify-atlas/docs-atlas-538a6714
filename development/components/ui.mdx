@@ -1,0 +1,694 @@
+---
+title: UI Components
+description: Reusable UI components for navigation, layout, and visual elements
+icon: 'paintbrush'
+---
+
+## Overview
+
+UI components provide consistent design patterns across the platform. They include:
+
+- **Navigation**: Header, navbar, mobile menu
+- **Layout**: Cards, grids, sections
+- **Interactive**: Galleries, modals, toasts
+- **Typography**: Headings, paragraphs, emphasis
+
+Most UI components are Astro components (`.astro`) with optional React islands for interactivity.
+
+## Header & Navigation
+
+### Header.tsx
+
+**Responsive navigation bar** with scroll-aware styling.
+
+```tsx
+// src/components/Header.tsx
+"use client";
+
+import {
+  Navbar,
+  NavBody,
+  NavItems,
+  MobileNav,
+  NavbarLogo,
+  NavbarButton,
+  MobileNavHeader,
+  MobileNavToggle,
+  MobileNavMenu,
+} from "@/components/ui/resizable-navbar";
+import { useEffect, useState } from "react";
+
+export function Header() {
+  const navItems = [
+    { name: "Inicio", link: "/" },
+    { name: "Comunicación", link: "/comunicacion" },
+    { name: "Directorio", link: "/directorio" },
+    { name: "Descargas", link: "/descargas" },
+    { name: "Turismo", link: "/turismo" },
+    { name: "Contacto", link: "/contacto" },
+  ];
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 100);
+    onScroll();
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div className="relative w-full">
+      {/* Fixed header */}
+      <div
+        className={[
+          "fixed top-0 left-0 w-full z-[999] transition-all duration-300",
+          scrolled ? "bg-white/95 shadow-md backdrop-blur-md" : "bg-transparent",
+        ].join(" ")}
+      >
+        <Navbar>
+          {/* Desktop Nav */}
+          <NavBody className="!bg-transparent">
+            <div className={scrolled ? "text-neutral-900" : "text-white"}>
+              <NavbarLogo />
+            </div>
+
+            <NavItems
+              items={navItems}
+              className={
+                scrolled
+                  ? "text-neutral-900 [&_a]:text-neutral-800 [&_a:hover]:text-black"
+                  : "text-white [&_a]:text-white/90 [&_a:hover]:text-white"
+              }
+            />
+
+            <div className="flex items-center gap-3">
+              <NavbarButton
+                variant="secondary"
+                as="a"
+                href="/contacto"
+                className={
+                  scrolled
+                    ? "border border-[#ff8200] text-[#ff8200] hover:bg-[#ff8200]/10"
+                    : "border border-white text-white hover:bg-white/10"
+                }
+              >
+                Atención ciudadana
+              </NavbarButton>
+
+              <NavbarButton
+                variant="primary"
+                as="a"
+                href="/transparencia"
+                className={
+                  scrolled
+                    ? "bg-[#ff8200] text-white hover:opacity-90"
+                    : "bg-white text-black hover:opacity-90"
+                }
+              >
+                Transparencia
+              </NavbarButton>
+            </div>
+          </NavBody>
+
+          {/* Mobile Nav */}
+          <MobileNav>
+            <MobileNavHeader>
+              <div className={scrolled ? "text-neutral-900" : "text-white"}>
+                <NavbarLogo />
+              </div>
+              <MobileNavToggle
+                isOpen={isMobileMenuOpen}
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              />
+            </MobileNavHeader>
+
+            <MobileNavMenu
+              isOpen={isMobileMenuOpen}
+              onClose={() => setIsMobileMenuOpen(false)}
+            >
+              <div className="flex flex-col gap-3">
+                {navItems.map((item, idx) => (
+                  <a
+                    key={`mobile-link-${idx}`}
+                    href={item.link}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-base font-medium text-neutral-900"
+                  >
+                    {item.name}
+                  </a>
+                ))}
+              </div>
+            </MobileNavMenu>
+          </MobileNav>
+        </Navbar>
+      </div>
+
+      {/* Spacer to prevent content overlap */}
+      <div className="h-20" />
+    </div>
+  );
+}
+```
+
+### Features
+
+- **Scroll-aware**: Changes style when user scrolls down
+- **Transparent hero**: Overlays hero images without background
+- **Responsive**: Desktop and mobile views
+- **Accessible**: Proper ARIA labels and keyboard navigation
+
+### Usage
+
+```astro
+---
+import { Header } from '@/components/Header.tsx';
+---
+
+<Header client:load />
+```
+
+<Info>
+Use `client:load` for Header to ensure immediate interactivity for navigation.
+</Info>
+
+## Resizable Navbar
+
+**Compound component system** for building flexible navbars.
+
+### Components
+
+```tsx
+// src/components/ui/resizable-navbar.tsx
+
+export function Navbar({ children, className }) {
+  return (
+    <nav className={cn("relative w-full", className)}>
+      {children}
+    </nav>
+  );
+}
+
+export function NavBody({ children, className }) {
+  return (
+    <div className={cn("hidden lg:flex items-center justify-between px-8 py-4", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function NavItems({ items, className }) {
+  return (
+    <ul className={cn("flex items-center gap-8", className)}>
+      {items.map((item, idx) => (
+        <li key={idx}>
+          <a href={item.link} className="font-medium hover:opacity-80 transition">
+            {item.name}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function NavbarLogo() {
+  return (
+    <a href="/" className="flex items-center gap-2">
+      <img src="/logo.svg" alt="Zongolica" className="h-10" />
+    </a>
+  );
+}
+
+export function NavbarButton({ children, variant = 'primary', as = 'button', href, className, ...props }) {
+  const Component = as === 'a' ? 'a' : 'button';
+  return (
+    <Component
+      href={as === 'a' ? href : undefined}
+      className={cn(
+        "px-6 py-2.5 rounded-full font-semibold transition",
+        variant === 'primary' && "bg-orange-500 text-white hover:bg-orange-600",
+        variant === 'secondary' && "border-2 border-orange-500 text-orange-500 hover:bg-orange-50",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </Component>
+  );
+}
+
+export function MobileNav({ children, className }) {
+  return (
+    <div className={cn("lg:hidden", className)}>
+      {children}
+    </div>
+  );
+}
+
+export function MobileNavHeader({ children }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-4">
+      {children}
+    </div>
+  );
+}
+
+export function MobileNavToggle({ isOpen, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-2 hover:bg-gray-100 rounded-lg transition"
+      aria-label="Toggle menu"
+    >
+      {isOpen ? (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ) : (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+export function MobileNavMenu({ isOpen, onClose, children, className }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className={cn("px-4 py-6 bg-white border-t", className)}>
+      {children}
+    </div>
+  );
+}
+```
+
+## Footer
+
+### Footer.astro
+
+```astro
+---
+// src/components/Footer.astro
+---
+
+<footer class="bg-gray-900 text-white py-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <!-- Logo & Description -->
+      <div class="col-span-1">
+        <img src="/logo-white.svg" alt="Zongolica" class="h-12 mb-4" />
+        <p class="text-sm text-gray-400">
+          H. Ayuntamiento de Zongolica, Veracruz
+        </p>
+        <p class="text-sm text-gray-400">
+          Administración 2026–2029
+        </p>
+      </div>
+
+      <!-- Links -->
+      <div>
+        <h3 class="font-bold mb-4">Gobierno</h3>
+        <ul class="space-y-2 text-sm text-gray-400">
+          <li><a href="/directorio" class="hover:text-white transition">Directorio</a></li>
+          <li><a href="/transparencia" class="hover:text-white transition">Transparencia</a></li>
+          <li><a href="/descargas" class="hover:text-white transition">Descargas</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="font-bold mb-4">Ciudadanía</h3>
+        <ul class="space-y-2 text-sm text-gray-400">
+          <li><a href="/turismo" class="hover:text-white transition">Turismo</a></li>
+          <li><a href="/contacto" class="hover:text-white transition">Contacto</a></li>
+          <li><a href="/comunicacion" class="hover:text-white transition">Comunicación</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="font-bold mb-4">Síguenos</h3>
+        <div class="flex gap-4">
+          <a href="#" aria-label="Facebook" class="hover:text-orange-500 transition">
+            <!-- Facebook icon -->
+          </a>
+          <a href="#" aria-label="Twitter" class="hover:text-orange-500 transition">
+            <!-- Twitter icon -->
+          </a>
+          <a href="#" aria-label="Instagram" class="hover:text-orange-500 transition">
+            <!-- Instagram icon -->
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
+      <p>© 2026 H. Ayuntamiento de Zongolica. Todos los derechos reservados.</p>
+    </div>
+  </div>
+</footer>
+```
+
+## Card Components
+
+### AtractivoCard.astro
+
+**Interactive card** for tourist attractions with hover effects.
+
+```astro
+---
+// src/components/AtractivoCard.astro
+import type { Atractivo } from "@/data/turismo/atractivos";
+
+const { item, size = "md", ...rest } = Astro.props as {
+  item: Atractivo;
+  size?: "sm" | "md" | "lg";
+  class?: string;
+};
+
+const href = `/turismo/atractivos/${item.slug}`;
+---
+
+<a
+  href={href}
+  {...rest}
+  class:list={[
+    "group relative overflow-hidden rounded-3xl bg-white/80 backdrop-blur-lg shadow-lg",
+    "transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-orange-300/50",
+    "focus:outline-none focus:ring-2 focus:ring-orange-400/50",
+    size === "lg" ? "md:col-span-2 md:row-span-2" : "",
+    (Astro.props as any).class,
+  ]}
+>
+  <!-- Background Image -->
+  <div class="absolute inset-0">
+    <img
+      src={item.imagen}
+      alt={item.titulo}
+      class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+      loading="lazy"
+    />
+    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:from-black/60 transition-all duration-500"></div>
+  </div>
+
+  <!-- Shine Effect -->
+  <div class="absolute -inset-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-full group-hover:-translate-x-full transition-transform duration-1000"></div>
+  </div>
+
+  <!-- Content -->
+  <div class="relative z-10 flex h-full flex-col justify-end p-7">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="inline-block rounded-full bg-white/95 backdrop-blur-sm px-3 py-1.5 text-xs font-bold text-orange-600 shadow-md">
+        {item.categoria}
+      </span>
+    </div>
+
+    <h3 class="text-2xl lg:text-3xl font-black text-white leading-tight">
+      {item.titulo}
+    </h3>
+    <p class="mt-2 text-sm text-white/90">
+      {item.subtitulo}
+    </p>
+
+    <div class="mt-5 flex items-center justify-between">
+      <div class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg group-hover:shadow-orange-500/50 transition-all">
+        <span class="text-xs font-bold text-white">Ver detalles</span>
+        <span class="transition-transform duration-300 group-hover:translate-x-1">→</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Glow Border -->
+  <div class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+    <div class="absolute -inset-1 bg-gradient-to-r from-orange-400 via-orange-300 to-orange-400 rounded-3xl opacity-0 group-hover:opacity-20 blur transition-opacity duration-300"></div>
+  </div>
+</a>
+
+<style>
+  .fade-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 800ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .fade-item.is-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fade-item {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+```
+
+## Gallery Component
+
+### Gallery.astro
+
+**Image gallery** with PhotoSwipe lightbox.
+
+```astro
+---
+// src/components/ui/Gallery.astro
+interface Props {
+  images: {
+    src: string;
+    alt: string;
+    width?: number;
+    height?: number;
+  }[];
+}
+
+const { images } = Astro.props;
+---
+
+<div class="gallery grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+  {images.map((image, idx) => (
+    <a
+      href={image.src}
+      data-pswp-width={image.width || 1200}
+      data-pswp-height={image.height || 800}
+      class="block overflow-hidden rounded-xl aspect-square"
+    >
+      <img
+        src={image.src}
+        alt={image.alt}
+        class="w-full h-full object-cover hover:scale-110 transition duration-500"
+        loading="lazy"
+      />
+    </a>
+  ))}
+</div>
+
+<script>
+  import PhotoSwipeLightbox from 'photoswipe/lightbox';
+  import 'photoswipe/style.css';
+
+  const lightbox = new PhotoSwipeLightbox({
+    gallery: '.gallery',
+    children: 'a',
+    pswpModule: () => import('photoswipe'),
+  });
+  lightbox.init();
+</script>
+```
+
+## Toast Notifications
+
+### SileoToaster.tsx
+
+**Toast notification system** using Sonner.
+
+```tsx
+// src/components/ui/SileoToaster.tsx
+import { Toaster } from 'sonner';
+
+export default function SileoToaster() {
+  return (
+    <Toaster
+      position="top-right"
+      toastOptions={{
+        style: {
+          background: 'white',
+          color: '#1f2937',
+          border: '1px solid #e5e7eb',
+          borderRadius: '0.75rem',
+          padding: '1rem',
+          fontSize: '0.875rem',
+          fontWeight: '500',
+        },
+        className: 'toast',
+        duration: 4000,
+      }}
+    />
+  );
+}
+```
+
+**Usage**:
+
+```tsx
+import { toast } from 'sonner';
+
+toast.success('¡Ruta guardada!');
+toast.error('Error al guardar');
+toast.loading('Cargando...');
+```
+
+## Typography Components
+
+### Headings
+
+```astro
+<!-- Consistent heading styles -->
+<h1 class="text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+  Main Heading
+</h1>
+
+<h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+  Section Title
+</h2>
+
+<h3 class="text-2xl font-semibold text-gray-700 mb-3">
+  Subsection
+</h3>
+```
+
+### Paragraphs
+
+```astro
+<p class="text-base md:text-lg text-gray-600 leading-relaxed">
+  Body text with comfortable line height for readability.
+</p>
+
+<p class="text-sm text-gray-500">
+  Small supporting text.
+</p>
+```
+
+### Emphasis
+
+```astro
+<p>
+  Normal text with <strong class="font-bold text-orange-600">emphasis</strong>
+  and <em class="italic">italics</em>.
+</p>
+```
+
+## Styling Patterns
+
+### Gradient Backgrounds
+
+```html
+<div class="bg-gradient-to-r from-orange-600 to-orange-500">
+  Gradient background
+</div>
+
+<div class="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500">
+  Multi-color gradient
+</div>
+```
+
+### Glassmorphism
+
+```html
+<div class="bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl">
+  Glass effect card
+</div>
+```
+
+### Shadows
+
+```html
+<!-- Subtle -->
+<div class="shadow-sm">
+
+<!-- Medium -->
+<div class="shadow-lg">
+
+<!-- Large -->
+<div class="shadow-2xl">
+
+<!-- Colored -->
+<div class="shadow-lg shadow-orange-500/50">
+```
+
+### Animations
+
+```html
+<!-- Hover lift -->
+<button class="transition transform hover:-translate-y-1 hover:shadow-lg">
+  Lift on hover
+</button>
+
+<!-- Fade in -->
+<div class="opacity-0 animate-fade-in">
+  Fades in
+</div>
+
+<!-- Spin -->
+<div class="animate-spin">
+  ⟳
+</div>
+```
+
+## Accessibility
+
+### ARIA Labels
+
+```astro
+<button aria-label="Cerrar menú">
+  <svg><!-- Icon --></svg>
+</button>
+
+<nav aria-label="Navegación principal">
+  <!-- Nav items -->
+</nav>
+```
+
+### Keyboard Navigation
+
+```astro
+<a
+  href="/turismo"
+  class="focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+>
+  Keyboard accessible link
+</a>
+```
+
+### Skip Links
+
+```astro
+<a
+  href="#main-content"
+  class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-orange-500 focus:text-white"
+>
+  Saltar al contenido principal
+</a>
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tourism Components" icon="map" href="/development/components/tourism">
+    Interactive tourism features
+  </Card>
+  <Card title="Component Overview" icon="puzzle-piece" href="/development/components/overview">
+    Component architecture
+  </Card>
+  <Card title="Tech Stack" icon="layer-group" href="/development/tech-stack">
+    Tailwind CSS and styling tools
+  </Card>
+  <Card title="Folder Structure" icon="folder-tree" href="/development/folder-structure">
+    Where UI components live
+  </Card>
+</CardGroup>
